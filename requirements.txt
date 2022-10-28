@@ -1,0 +1,5 @@
+#INSERT ROS2 DEPENDENCIES HERE
+
+
+#PIP3
+pip install numpy-stl
