@@ -11,6 +11,10 @@ from rclpy.node import Node
 from scipy.spatial.transform import Rotation
 from std_msgs.msg import Float32, Int32MultiArray, String
 
+import numpy
+
+numpy.linalg.eigvals
+
 class Model():
     """
     A model consists of a base(non moving parts) and wheels(the moving parts)
