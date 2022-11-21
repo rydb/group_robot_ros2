@@ -10,6 +10,7 @@ import time
 import zipfile
 import re
 import sympy as sym
+import glob
 #Help resources for figuring out urdfs/etc...
 """
 xacro how to
@@ -27,14 +28,23 @@ https://insights.dice.com/2019/01/25/xml-vs-json-difference-developers/
 how to use lxml library
 https://stackabuse.com/introduction-to-the-python-lxml-library/
 
+how to build a urdf file:
+https://docs.ros.org/en/galactic/Tutorials/Intermediate/URDF/URDF-Main.html
+
+urdf file github:
+https://github.com/ros/urdf_tutorial/tree/ros2/
+
+Learning ROS2:
+https://www.reddit.com/r/ROS/comments/w2zcgw/best_way_to_learn_ros/
 """
 
 _measurement_multiplier = {
 "mm": 0.001
 }
 
-model_dir = "models/"
+models_dir = "models/"
 
+urdf_dir = ""
 
 class Spreadsheet():
     """
@@ -197,16 +207,12 @@ class Model:
 
 
         self.read_obj_model()
+        self.define_self_as_xml()
         #collect everything relevant about the model like length, height, controid, etc, and set relevant model's
         #self details inside method.
 
         #self.construct_urdf("diff_drive.urdf")
         #self.xacro_properties_list = self.fetch_self_as_urdf()
-
-        self.define_self_as_xml()
-        """
-        all properties of object as xacro properties like length, width, height, etc....
-        """
 
     def read_obj_model(self):
         """
@@ -275,6 +281,8 @@ class Model:
         \
             self.self_as_urdf.append([2, "<visual>"]) #VISUAL
         \
+                self.self_as_urdf.append([3, "<origin xyz=\"%s %s %s\">" % (self.centroid[0], self.centroid[1], self.centroid[2])])   
+        \
                 self.self_as_urdf.append([3, "<geometry>"]) #GEOMETRY
         \
                     self.self_as_urdf.append([4 ,"<mesh filename=\"%s\"/>" % self.model_dir])
@@ -311,8 +319,8 @@ class Model:
         take all model params for this model and its sub models and construct a urdf file for ROS2
         """
         tab = "    "
-
-        f = open("./%s"  % (name_of_urdf), "w")
+        print(self.self_as_urdf)
+        f = open("./%s%s"  % (self.model_dir ,name_of_urdf), "w")
         f.write("<?xml version=\"1.0\"?>" + "\n")
         f.write("<robot name=\"diff_bot\" xmlns:xacro=\"http://ros.org/wiki/xacro\">" + "\n")
 
@@ -329,12 +337,13 @@ def calculate_mass_of_stl():
     get the mass of an stl
     """
 
-wheel = Model("models/urdfmodel-Wheel.obj", "left_wheel", "mm")
+#wheel = Model("models/urdfmodel-Wheel.obj", "left_wheel", "mm")
 #wheel = Model("models/urdfmodel-Wheel.obj", "right_wheel", "mm")
-base_body = Model("models/urdfmodel-BodyBase.obj", "base", "mm", wheel)
+#base_body = Model("models/urdfmodel-BodyBase.obj", "base", "mm")
 
 spreadsheet = Spreadsheet("./urdfmodel.FCStd", "xml")
 spreadsheet.read_FreeCAD_spreadsheet("specs_spreadsheet")
-#print(spreadsheet.spreadsheet_dict)
+print(spreadsheet.spreadsheet_dict)
 
-base_body.construct_urdf("testurdf.urdf")
+
+#base_body.construct_urdf("testurdf.urdf")

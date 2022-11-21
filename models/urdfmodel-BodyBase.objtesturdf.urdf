@@ -1,17 +1,8 @@
 <?xml version="1.0"?>
 <robot name="diff_bot" xmlns:xacro="http://ros.org/wiki/xacro">
-    <link name="left_wheel_link">
-        <visual>
-            <geometry>
-                <mesh filename="models/urdfmodel-Wheel.obj"/>
-            </geometry>
-            <material>
-                <color rgba="1.0 1.0 1.0 1.0"/>
-            </material>
-        </visual>
-    </link>
     <link name="base_link">
         <visual>
+            <origin xyz="0.1 0.15 0.065">
             <geometry>
                 <mesh filename="models/urdfmodel-BodyBase.obj"/>
             </geometry>

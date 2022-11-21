@@ -10,6 +10,8 @@ from rclpy.clock import ROSClock
 from rclpy.node import Node
 from scipy.spatial.transform import Rotation
 from std_msgs.msg import Float32, Int32MultiArray, String
+import os
+import glob
 
 import numpy
 
@@ -53,7 +55,12 @@ def publish_model():
     pass
 
 def main():
-    print('Hi from model_pkg.')
+    package_name = "model_pkg"
+    print("the current file being executed is %s" % os.path.dirname(os.path.realpath(__file__)))
+    #print(os.path.join('share/%s/launch') % "model_pkg", glob.glob('launch/*.py'))
+    #print(os.path.join('share', package_name, 'launch'),
+    #    glob.glob('launch/*.py'))
+    #print('Hi from model_pkg.')
 
 if __name__ == '__main__':
     main()
