@@ -46,7 +46,7 @@ Packages for the bash script to compile and launch, I.E:
 "publisher" is the name of the node
 """
 
-def ammend_setup_py(launch_conf: launch_configuration):
+def replace_setup_py(launch_conf: launch_configuration):
     """
     adds EVERY folder in each package_to_build to their /share directorys for each setup.py
 
@@ -141,7 +141,122 @@ def ammend_setup_py(launch_conf: launch_configuration):
                 print('WARNING: Expected IGNORE or WRITE, got ' + l[0] + 'treating as IGNORE')
                 f.write(f_lines[i])
 
+def generate_launch_py(launch_conf: launch_configuration):
+    """
+    managing launch files is too much mental micromangement, so instead generate launch file to run based on launch_configuration here.
 
+    collects:
+        1: all packages that are being built, 
+        2: launch file directory, 
+        3: misc launch variables that are in launch_configuration
+
+    and then creates a launch.py file based off of those parameters for other functions in simple_run to launch.
+    """
+    launch_file_parent_pkg = launch_conf.launch_pkg_n_name[0]
+    launch_file = launch_conf.launch_pkg_n_name[1]
+
+    #fetch share directory command, since this needs to be executed as a part of the launch file, append the command to be executed inside the launch file
+    package_name_var_name = "package_name"
+    share_directory_command = "ament_index_python.packages.get_package_share_directory(%s)" % package_name_var_name
+    #For the sake of testinging, launch_file is "sample_launch.py"
+    launch_file = "sample_launch_file.py"
+
+
+    ###
+    # Packages that are built launch configuration
+    ###
+    launch_pkgs = []
+    for pkg in launch_conf.packages_to_build:
+        pkg_launch_conf_as_dict = {
+            "package": "'%s'" % pkg,
+            "executable": "'%s'" % launch_conf.packages_to_build[pkg],
+            "output": "'screen'", #I'm not sure what setting output to screen does, but nothing breaks when this is set to screen.
+            "parameters": "[]",
+        }
+        launch_pkgs.append(pkg_launch_conf_as_dict)
+    
+    ###
+    # RVIZ2 launch configuration
+    ###
+    rviz2_launch = {
+        "package": "'rviz2'",
+        "executable": "'rviz2'",
+        "output": "'screen'",
+        "arguements": "['-d', share_directory + '/rviz/%s']" % launch_conf.pkg_n_rviz_config[1]
+    }
+
+    ###
+    # rqt_gui
+    ###
+    rqt_gui = {
+        "package": "'rqt_gui'",
+        "executable": "'rqt_gui'",
+        "output": "'screen'",
+        "parameters": "[]"
+    }
+
+    #######
+    #choose package to append here:
+    ######
+    launch_pkgs.append(rviz2_launch)
+    launch_pkgs.append(rqt_gui)
+
+    #get every line ready and constructed to be written into the new launch file
+    launch_l_list = []
+
+
+    print(launch_pkgs)
+
+    f = open("./src/%s/launch/%s" % (launch_file_parent_pkg, launch_file), "w")
+    launch_l_list = []
+
+    launch_l_list.append([0, "from launch import LaunchDescription"])
+    launch_l_list.append([0, "from launch_ros.actions import Node"])
+    launch_l_list.append([0, "import ament_index_python\n"])
+
+    launch_l_list.append([0, "package_name = 'model_pkg'"])
+    launch_l_list.append([0, "share_directory = ament_index_python.packages.get_package_share_directory(%s)\n\n" % package_name_var_name])
+
+    launch_l_list.append([ 0, "def generate_launch_description():"])
+    \
+        launch_l_list.append([ 1, ""])
+    \
+        launch_l_list.append([ 1, "return LaunchDescription(["])
+    \
+        for pkg in launch_pkgs:
+
+            launch_l_list.append([2, "Node("])
+            for param in pkg:
+                launch_l_list.append([3, "%s=%s," % (param, pkg[param])])
+                #launch_l_list.append([ 3, "executable='model',"])
+                #launch_l_list.append([ 3, "output='screen',"])
+                #launch_l_list.append([ 3, "parameters=[],"])
+            launch_l_list.append([ 2, "),"])
+    \
+        launch_l_list.append([ 1, "])"])
+
+    tab = "    "
+    for i in range(0, launch_l_list.__len__()):
+        l =  launch_l_list[i]
+        f.write((tab * l[0]) + l[1] + "\n")
+        
+
+"""
+f = open('sim_launch.py', 'r')
+f_lines = f.readlines()
+f.close()
+f = open('sim_launch.py', 'w')
+tab = "    "
+for i in range(0, launch_l_list.__len__()):
+    l =  launch_l_list[i]
+    if(l[0] == 'IGNORE'):
+        f.write(f_lines[i])
+    elif(l[0] == 'WRITE'):
+        f.write((tab * l[1]) + l[2] + "\n")
+    else:
+        print('WARNING: Expected 'IGNORE' or 'WRITE', got ' + l[0] + 'treating as 'IGNORE'')
+        f.write(f_lines[i])
+"""
 
 def construct_bash_script(launch_conf: launch_configuration):
     bash_name = "simple_run_commands.sh"
@@ -177,8 +292,9 @@ def construct_bash_script(launch_conf: launch_configuration):
     f.close()
     rc = subprocess.call("./%s" % bash_name)
 
-#ammend_setup_py(sim_env_conf)
-construct_bash_script(sim_env_conf)
+#replace_setup_py(sim_env_conf)
+generate_launch_py(sim_env_conf)
+#construct_bash_script(sim_env_conf)
 
 #print(glob.glob("./src/model_pkg/*/"))
 

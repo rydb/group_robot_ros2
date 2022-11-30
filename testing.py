@@ -341,9 +341,11 @@ def calculate_mass_of_stl():
 #wheel = Model("models/urdfmodel-Wheel.obj", "right_wheel", "mm")
 #base_body = Model("models/urdfmodel-BodyBase.obj", "base", "mm")
 
-spreadsheet = Spreadsheet("./urdfmodel.FCStd", "xml")
-spreadsheet.read_FreeCAD_spreadsheet("specs_spreadsheet")
-print(spreadsheet.spreadsheet_dict)
+#spreadsheet = Spreadsheet("./urdfmodel.FCStd", "xml")
+#spreadsheet.read_FreeCAD_spreadsheet("specs_spreadsheet")
+#print(spreadsheet.spreadsheet_dict)
 
+bob = ["x", "y", "z"]
+print(bob.pop())
 
 #base_body.construct_urdf("testurdf.urdf")

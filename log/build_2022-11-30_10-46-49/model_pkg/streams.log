@@ -1,0 +1,46 @@
+[0.941s] Invoking command in '/home/rydb/projects/group_robot_ros2/src/model_pkg': PYTHONPATH=/home/rydb/projects/group_robot_ros2/install/model_pkg/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 setup.py egg_info --egg-base ../../build/model_pkg build --build-base /home/rydb/projects/group_robot_ros2/build/model_pkg/build install --prefix /home/rydb/projects/group_robot_ros2/install/model_pkg --record /home/rydb/projects/group_robot_ros2/build/model_pkg/install.log --single-version-externally-managed
+[1.260s] running egg_info
+[1.260s] creating ../../build/model_pkg/model_pkg.egg-info
+[1.261s] writing ../../build/model_pkg/model_pkg.egg-info/PKG-INFO
+[1.261s] writing dependency_links to ../../build/model_pkg/model_pkg.egg-info/dependency_links.txt
+[1.261s] writing entry points to ../../build/model_pkg/model_pkg.egg-info/entry_points.txt
+[1.261s] writing requirements to ../../build/model_pkg/model_pkg.egg-info/requires.txt
+[1.262s] writing top-level names to ../../build/model_pkg/model_pkg.egg-info/top_level.txt
+[1.263s] writing manifest file '../../build/model_pkg/model_pkg.egg-info/SOURCES.txt'
+[1.303s] reading manifest file '../../build/model_pkg/model_pkg.egg-info/SOURCES.txt'
+[1.304s] writing manifest file '../../build/model_pkg/model_pkg.egg-info/SOURCES.txt'
+[1.304s] running build
+[1.304s] running build_py
+[1.305s] creating /home/rydb/projects/group_robot_ros2/build/model_pkg/build
+[1.305s] creating /home/rydb/projects/group_robot_ros2/build/model_pkg/build/lib
+[1.305s] creating /home/rydb/projects/group_robot_ros2/build/model_pkg/build/lib/model_pkg
+[1.305s] copying model_pkg/__init__.py -> /home/rydb/projects/group_robot_ros2/build/model_pkg/build/lib/model_pkg
+[1.305s] copying model_pkg/model.py -> /home/rydb/projects/group_robot_ros2/build/model_pkg/build/lib/model_pkg
+[1.305s] running install
+[1.306s] running install_lib
+[1.308s] creating /home/rydb/projects/group_robot_ros2/install/model_pkg/lib/python3.8/site-packages/model_pkg
+[1.308s] copying /home/rydb/projects/group_robot_ros2/build/model_pkg/build/lib/model_pkg/__init__.py -> /home/rydb/projects/group_robot_ros2/install/model_pkg/lib/python3.8/site-packages/model_pkg
+[1.308s] copying /home/rydb/projects/group_robot_ros2/build/model_pkg/build/lib/model_pkg/model.py -> /home/rydb/projects/group_robot_ros2/install/model_pkg/lib/python3.8/site-packages/model_pkg
+[1.308s] byte-compiling /home/rydb/projects/group_robot_ros2/install/model_pkg/lib/python3.8/site-packages/model_pkg/__init__.py to __init__.cpython-38.pyc
+[1.310s] byte-compiling /home/rydb/projects/group_robot_ros2/install/model_pkg/lib/python3.8/site-packages/model_pkg/model.py to model.cpython-38.pyc
+[1.310s] running install_data
+[1.311s] copying package.xml -> /home/rydb/projects/group_robot_ros2/install/model_pkg/share/model_pkg
+[1.311s] creating /home/rydb/projects/group_robot_ros2/install/model_pkg/share/model_pkg/model_pkg
+[1.311s] copying model_pkg/__init__.py -> /home/rydb/projects/group_robot_ros2/install/model_pkg/share/model_pkg/model_pkg
+[1.311s] copying model_pkg/model.py -> /home/rydb/projects/group_robot_ros2/install/model_pkg/share/model_pkg/model_pkg
+[1.311s] creating /home/rydb/projects/group_robot_ros2/install/model_pkg/share/model_pkg/resource
+[1.311s] copying resource/model_pkg -> /home/rydb/projects/group_robot_ros2/install/model_pkg/share/model_pkg/resource
+[1.311s] creating /home/rydb/projects/group_robot_ros2/install/model_pkg/share/model_pkg/rviz
+[1.312s] copying rviz/rviz_config_test.rviz -> /home/rydb/projects/group_robot_ros2/install/model_pkg/share/model_pkg/rviz
+[1.312s] creating /home/rydb/projects/group_robot_ros2/install/model_pkg/share/model_pkg/test
+[1.312s] copying test/test_pep257.py -> /home/rydb/projects/group_robot_ros2/install/model_pkg/share/model_pkg/test
+[1.312s] copying test/test_copyright.py -> /home/rydb/projects/group_robot_ros2/install/model_pkg/share/model_pkg/test
+[1.312s] copying test/test_flake8.py -> /home/rydb/projects/group_robot_ros2/install/model_pkg/share/model_pkg/test
+[1.312s] creating /home/rydb/projects/group_robot_ros2/install/model_pkg/share/model_pkg/launch
+[1.312s] copying launch/sim_launch.py -> /home/rydb/projects/group_robot_ros2/install/model_pkg/share/model_pkg/launch
+[1.313s] running install_egg_info
+[1.315s] Copying ../../build/model_pkg/model_pkg.egg-info to /home/rydb/projects/group_robot_ros2/install/model_pkg/lib/python3.8/site-packages/model_pkg-0.0.0-py3.8.egg-info
+[1.316s] running install_scripts
+[1.337s] Installing model script to /home/rydb/projects/group_robot_ros2/install/model_pkg/lib/model_pkg
+[1.337s] writing list of installed files to '/home/rydb/projects/group_robot_ros2/build/model_pkg/install.log'
+[1.359s] Invoked command in '/home/rydb/projects/group_robot_ros2/src/model_pkg' returned '0': PYTHONPATH=/home/rydb/projects/group_robot_ros2/install/model_pkg/lib/python3.8/site-packages:${PYTHONPATH} /usr/bin/python3 setup.py egg_info --egg-base ../../build/model_pkg build --build-base /home/rydb/projects/group_robot_ros2/build/model_pkg/build install --prefix /home/rydb/projects/group_robot_ros2/install/model_pkg --record /home/rydb/projects/group_robot_ros2/build/model_pkg/install.log --single-version-externally-managed
