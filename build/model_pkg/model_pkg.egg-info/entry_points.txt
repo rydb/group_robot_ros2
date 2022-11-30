@@ -1,3 +1,0 @@
-[console_scripts]
-model = model_pkg.model:main
-
