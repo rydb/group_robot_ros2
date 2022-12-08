@@ -9,4 +9,4 @@ source /opt/ros/foxy/setup.bash
 
 source install/setup.sh
 
-ros2 launch model_pkg  sim_launch.py
+ros2 launch model_pkg  sample_launch_file.py

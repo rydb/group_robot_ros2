@@ -26,7 +26,7 @@ sim_env_conf = launch_configuration(
     {
         "model_pkg": "model", #package name, name of python file being executed without.py extension(E.G: model.py = model)
     },
-    ["model_pkg", "sim_launch.py"], #package_name, launch_file to launch in package_name/launch/
+    ["model_pkg", "sample_launch_file.py"], #package_name, launch_file to launch in package_name/launch/
     ["model_pkg", "rviz_config_test.rviz"] #package_name, rviz_config file in package_name/rviz/
     )
 
@@ -182,7 +182,7 @@ def generate_launch_py(launch_conf: launch_configuration):
         "package": "'rviz2'",
         "executable": "'rviz2'",
         "output": "'screen'",
-        "arguements": "['-d', share_directory + '/rviz/%s']" % launch_conf.pkg_n_rviz_config[1]
+        "arguments": "['-d', share_directory + '/rviz/%s']" % launch_conf.pkg_n_rviz_config[1]
     }
 
     ###
@@ -195,11 +195,23 @@ def generate_launch_py(launch_conf: launch_configuration):
         "parameters": "[]"
     }
 
+    ###
+    # Robot_state_publisher
+    ###
+
+    robot_state_publisher = {
+        "package": " 'robot_state_publisher' ",
+        "executable": " 'robot_state_publisher' ",
+        "name": " 'robot_state_publisher' ",
+        "output": " 'screen' ",
+        "parameters": "[{'use_sim_time': True, 'robot_description': robot_desc}]",
+    }
     #######
     #choose package to append here:
     ######
     launch_pkgs.append(rviz2_launch)
     launch_pkgs.append(rqt_gui)
+    launch_pkgs.append(robot_state_publisher)
 
     #get every line ready and constructed to be written into the new launch file
     launch_l_list = []
@@ -215,11 +227,14 @@ def generate_launch_py(launch_conf: launch_configuration):
     launch_l_list.append([0, "import ament_index_python\n"])
 
     launch_l_list.append([0, "package_name = 'model_pkg'"])
-    launch_l_list.append([0, "share_directory = ament_index_python.packages.get_package_share_directory(%s)\n\n" % package_name_var_name])
+    launch_l_list.append([0, "share_directory = ament_index_python.packages.get_package_share_directory(%s)\n" % package_name_var_name])
+    launch_l_list.append([0, "urdf = share_directory + '/urdf/test.urdf.xml'"])
 
     launch_l_list.append([ 0, "def generate_launch_description():"])
     \
-        launch_l_list.append([ 1, ""])
+        launch_l_list.append([1, "with open(urdf, 'r') as infp:"])
+    \
+            launch_l_list.append([2, "robot_desc = infp.read()\n\n"])
     \
         launch_l_list.append([ 1, "return LaunchDescription(["])
     \
@@ -228,9 +243,6 @@ def generate_launch_py(launch_conf: launch_configuration):
             launch_l_list.append([2, "Node("])
             for param in pkg:
                 launch_l_list.append([3, "%s=%s," % (param, pkg[param])])
-                #launch_l_list.append([ 3, "executable='model',"])
-                #launch_l_list.append([ 3, "output='screen',"])
-                #launch_l_list.append([ 3, "parameters=[],"])
             launch_l_list.append([ 2, "),"])
     \
         launch_l_list.append([ 1, "])"])
@@ -292,9 +304,21 @@ def construct_bash_script(launch_conf: launch_configuration):
     f.close()
     rc = subprocess.call("./%s" % bash_name)
 
-#replace_setup_py(sim_env_conf)
+def create_urdf_of_model():
+    """
+    Take a FreeCAD model, and convert it to a URDF, and place a .DAE file of the model inside the package model directory of the rviz config's parent package:
+
+    I.E:
+        If rviz_config.conf is stored in model_pkg, then auto_urdf.urdf will be stored in model_pkg<the root one>/models
+    """
+    print("FINISH CODE HERE")
+    
+    pass
+
+#create_urdf_of_model()
+replace_setup_py(sim_env_conf)
 generate_launch_py(sim_env_conf)
-#construct_bash_script(sim_env_conf)
+construct_bash_script(sim_env_conf)
 
 #print(glob.glob("./src/model_pkg/*/"))
 

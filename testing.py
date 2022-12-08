@@ -11,6 +11,8 @@ import zipfile
 import re
 import sympy as sym
 import glob
+import subprocess
+import sys
 #Help resources for figuring out urdfs/etc...
 """
 xacro how to
@@ -57,6 +59,8 @@ class Spreadsheet():
         self.spreadsheet_type = spreadsheet_type
 
         self.spreadsheet_dict = "???"
+
+        
         """
         spreadsheet result from reading as dict
         """
@@ -345,7 +349,10 @@ def calculate_mass_of_stl():
 #spreadsheet.read_FreeCAD_spreadsheet("specs_spreadsheet")
 #print(spreadsheet.spreadsheet_dict)
 
-bob = ["x", "y", "z"]
-print(bob.pop())
+#bob = ["x", "y", "z"]
+#print(bob.pop())
 
+freecad_macro = "export_model_to_urdf.py"
+output = subprocess.check_output([sys.executable, "freecad_macros/" + freecad_macro])
+print(output)
 #base_body.construct_urdf("testurdf.urdf")
