@@ -352,7 +352,9 @@ def calculate_mass_of_stl():
 #bob = ["x", "y", "z"]
 #print(bob.pop())
 
-freecad_macro = "export_model_to_urdf.py"
-output = subprocess.check_output([sys.executable, "freecad_macros/" + freecad_macro])
-print(output)
+#freecad_macro = "export_model_to_urdf.py"
+#output = subprocess.check_output([sys.executable, "freecad_macros/" + freecad_macro])
+
+import collada
+#print(output)
 #base_body.construct_urdf("testurdf.urdf")

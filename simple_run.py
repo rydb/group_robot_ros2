@@ -3,8 +3,12 @@
 import os
 import subprocess
 import glob
+import sys
 
-
+urdf_name = "diff_bot.urdf.xml"
+"""
+urdf_file name. Will want to move this later.
+"""
 class launch_configuration():
     """
     object that holds all of the parameters for a specific type of a ros2 enviorment. E.G: configuration for running a simulation enviorment/real enviorment.
@@ -160,7 +164,7 @@ def generate_launch_py(launch_conf: launch_configuration):
     share_directory_command = "ament_index_python.packages.get_package_share_directory(%s)" % package_name_var_name
     #For the sake of testinging, launch_file is "sample_launch.py"
     launch_file = "sample_launch_file.py"
-
+    urdf_file = urdf_name
 
     ###
     # Packages that are built launch configuration
@@ -228,7 +232,7 @@ def generate_launch_py(launch_conf: launch_configuration):
 
     launch_l_list.append([0, "package_name = 'model_pkg'"])
     launch_l_list.append([0, "share_directory = ament_index_python.packages.get_package_share_directory(%s)\n" % package_name_var_name])
-    launch_l_list.append([0, "urdf = share_directory + '/urdf/test.urdf.xml'"])
+    launch_l_list.append([0, "urdf = share_directory + '/urdf/%s'" % urdf_file])
 
     launch_l_list.append([ 0, "def generate_launch_description():"])
     \
@@ -304,21 +308,21 @@ def construct_bash_script(launch_conf: launch_configuration):
     f.close()
     rc = subprocess.call("./%s" % bash_name)
 
-def create_urdf_of_model():
+def create_urdf_of_model(launch_conf: launch_configuration):
     """
-    Take a FreeCAD model, and convert it to a URDF, and place a .DAE file of the model inside the package model directory of the rviz config's parent package:
+    Take a FreeCAD model, and convert it to a URDF, and place .DAE files of the model inside the package model directory of the rviz config's parent package:
 
     I.E:
         If rviz_config.conf is stored in model_pkg, then auto_urdf.urdf will be stored in model_pkg<the root one>/models
     """
-    print("FINISH CODE HERE")
+    model_name = "urdfmodel.FCStd"
+    os.system("python3 freecad_macros/export_model_to_urdf.py %s %s %s %s" % (os.getcwd(), launch_conf.launch_pkg_n_name[0], model_name, urdf_name))
     
     pass
 
-#create_urdf_of_model()
+create_urdf_of_model(sim_env_conf)
 replace_setup_py(sim_env_conf)
 generate_launch_py(sim_env_conf)
 construct_bash_script(sim_env_conf)
 
-#print(glob.glob("./src/model_pkg/*/"))
 

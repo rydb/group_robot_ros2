@@ -1,0 +1,39 @@
+<robot name="diff_bot">
+    <link name="BodyBase_link">
+        <visual>
+            <origin xyz="-4.144832625267252e-20 1.1193780944897578e-18 0.065">
+            <geometry>
+                <mesh filename="package://model_pkg/models/BodyBase.dae"/>
+            </geometry>
+        </visual>
+    </link>
+
+    <joint name="LeftWheel_joint" type="continuous">
+        <parent link="BodyBase_link"/>
+        <child link="LeftWheel_link"/>
+    </joint>
+
+    <link name="LeftWheel_link">
+        <visual>
+            <origin xyz="0.11 0.085 0.065">
+            <geometry>
+                <mesh filename="package://model_pkg/models/LeftWheel.dae"/>
+            </geometry>
+        </visual>
+    </link>
+
+    <joint name="RightWheel_joint" type="continuous">
+        <parent link="BodyBase_link"/>
+        <child link="RightWheel_link"/>
+    </joint>
+
+    <link name="RightWheel_link">
+        <visual>
+            <origin xyz="-0.10999998474120781 0.08499999999999999 0.06500002622604345">
+            <geometry>
+                <mesh filename="package://model_pkg/models/RightWheel.dae"/>
+            </geometry>
+        </visual>
+    </link>
+
+</robot>

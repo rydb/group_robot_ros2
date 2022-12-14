@@ -3,9 +3,6 @@
 
 import os
 import sys
-#import collada
-#print("collada is located at %s " % collada.__file__)
-#print(os.environ['HOME'])
 FreeCAD = ""
 try:
     import FreeCAD
@@ -23,8 +20,8 @@ print("current python interpreter is: %s" % sys.executable)
 
 current_env = sys.executable
 macro_name = os.path.basename(__file__)
-models_folder = "freecad_macros/"
-external_libs_dir = os.environ['HOME']
+current_py_file = os.path.basename(__file__)
+
 
 """
 FREECAD WIKI FOR COMMANDS
@@ -32,12 +29,16 @@ https://wiki.freecadweb.org/Debugging#Python_Debugging
 """
 
 if(FreeCAD == ""):
-    import collada
-    collada_path = collada.__file__
     print("STARTUP: script probably not executed as macro inside FreeCAD. re-running script through freecad")
 
-    #runs Freecad via cmd in cmd mode and appends this macro and grabs 
-    os.system("freecad -c ./freecad_macros/%s %s" % (macro_name, collada_path))
+    #runs Freecad via cmd in cmd mode and appends this macro and grabs every sys.argv after first 3 commands and adds that to command
+    final_console_cmd = "freecad -c ./freecad_macros/" + current_py_file
+    print(sys.argv.__len__())
+    for i in range(1, sys.argv.__len__()):
+        print("APPENDED sys arg " + sys.argv[i])
+        final_console_cmd += " " + sys.argv[i]
+    print(final_console_cmd)
+    os.system(final_console_cmd)
     exit()
     
 
@@ -50,7 +51,33 @@ class Model():
     ---
         1: FreeCAD's internal model params should NOT be saved as self. Its data clutter. Save relevant individual parts of the model like position to self though.
     """
-    def __init__(self, model_doc: str, model_name: str, *sub_models, color="white"):
+    def __init__(self, package_dir: str, model_doc: str, model_name: str, joint_type: str, ros_link_name: str, sub_models=None, color="white"):
+        mm_to_m = 0.001
+        """
+        multiply by this num to get meters version of FreeCAD's default mm measurements.
+        All measurements are stored in mm in FreeCAD(at least in 0.20.1?) in mm regardless of current set measurement unit.
+        """
+
+        self.models_folder = "%s/models/" % package_dir 
+        self.urdf_folder = "%s/urdf/" % package_dir
+
+
+        self.package_dir = package_dir
+        """
+        package_dir
+        ---
+            The root package folder which stores/will store model info/urdf info.
+            E.G:
+                if model_pkg is the package where model information will be stored
+                then `(project_directory)/model_pkg` is package_dir
+                
+                models will be stored in:
+                `package_dir/models`
+
+                the created urdf file will be stored in
+                `package_dir/urdf`
+        """
+        self.package_name = package_dir.split("/")[-1]
         self.model_doc = FreeCAD.open(model_doc)
         """
         model_doc
@@ -61,7 +88,8 @@ class Model():
         """
         model
         ---
-            This is the model as it exists in FreeCAD
+            This is the model as it exists in FreeCAD.
+
             when FreeCad does 'findObjects', or when refering to model variables stored in FreeCAD, this is what to reference.
         """
         if(self.model_doc.findObjects(Label=model_name).__len__() > 1):
@@ -73,7 +101,28 @@ class Model():
         ---
             Name of model's Label in FreeCAD.
         """
-        self.center_xyz = [self.model.Shape.CenterOfMass[0], self.model.Shape.CenterOfMass[1], self.model.Shape.CenterOfMass[2]]
+        self.joint_type = joint_type
+        """
+        joint type in urdf E.G:
+            Continous = revolves around an origin, E.G: wheel
+
+            swivel = ???
+        """
+        self.ros_name = ros_link_name
+        """
+        ros_name:
+        ---
+            This is the model's name to be set inside the urdf file for links/joints and to be searched for when looking for the model in the ros2 topic list.
+
+            to prevent ros2 simulation code from breaking because the model name changed in FreeCAD, the model's name and its ros2 link are set seperately
+            E.G: if the model's name is `BaseBody`, you would want to instead input `base` for this
+        """
+        self.sub_models = sub_models
+        """
+        all sub models of this model. 
+        """
+
+        self.center_xyz = [self.model.Shape.CenterOfMass[0] * mm_to_m, self.model.Shape.CenterOfMass[1] * mm_to_m, self.model.Shape.CenterOfMass[2] * mm_to_m]
         """
         center/centroid of the model:
         ---
@@ -85,12 +134,13 @@ class Model():
         ---
             according to freecad, this is all parent objects which hold the current model in the deisgn
         """
-        self.origin = [self.model.Placement.Base[0], self.model.Placement.Base[1], self.model.Placement.Base[2]]
+        self.origin = [self.model.Placement.Base[0] * mm_to_m, self.model.Placement.Base[1] * mm_to_m, self.model.Placement.Base[2] * mm_to_m]
         """
         origin:
         ---
             start point of the sketch plane of the model. This CAN be different then centroid and is required to make position math relative to center of the object.
         """
+        #export self as dae since urdf needs these models
 
     def __repr__(self):
         print("%s SPECS:" % self.model_name)
@@ -101,23 +151,30 @@ class Model():
         print("model origin in FreeCAD: %s" % self.origin)
         return ""
 
+    #def convert_to_m(mm_measure):
+    #    """
+    #   convert FreeCAD's default mm measurements to m.
+    #    Model still exports models to mm regardless of measurement units from tesitng, so this assumes all models are measured in mm
+    #    """
+    #    return mm_measure * 0.001
 
-    def define_self_as_urdf(self):
-        
-        urdf_dir = models_folder + "freecad_urdf.xml"
-        self_as_urdf = []
+    def get_self_as_urdf(self):
+        """
+        gets relevant information about self and return a list in urdf format. This is not exporting self as urdf, that uses this to get qualites of models for exporting.
+        """
+        l_list = []
 
-        self_as_urdf.append([0 ,"<link name=\"%s_link\">" % self.model_name])
+        l_list.append([1 ,"<link name=\"%s_link\">" % self.ros_name])
         \
-            self_as_urdf.append([1, "<visual>"]) #VISUAL
+            l_list.append([2, "<visual>"]) #VISUAL
         \
-                self_as_urdf.append([2, "<origin xyz=\"%s %s %s\">" % (self.center_xyz[0], self.center_xyz[1], self.center_xyz[2])])   
+                l_list.append([3, "<origin xyz=\"%s %s %s\"/>" % (self.center_xyz[0], self.center_xyz[1], self.center_xyz[2])])   
         \
-                self_as_urdf.append([2, "<geometry>"]) #GEOMETRY
+                l_list.append([3, "<geometry>"]) #GEOMETRY
         \
-                    self_as_urdf.append([3 ,"<mesh filename=\"%s\"/>" % urdf_dir])
+                    l_list.append([4 ,"<mesh filename=\"package://%s/models/%s.dae\"/>" % (self.package_name, self.ros_name)])
         \
-                self_as_urdf.append([2, "</geometry>"])
+                l_list.append([3, "</geometry>"])
         \
         """
                 self_as_urdf.append([3, "<material>"]) #MATERIAL 
@@ -128,46 +185,75 @@ class Model():
         
         """
         \
-            self_as_urdf.append([1, "</visual>"])
+            l_list.append([2, "</visual>"])
         \
-        self_as_urdf.append([0, "</link>"])
+        l_list.append([1, "</link>"])
 
+        return l_list
+
+    def export_self_as_urdf(self):
+        """"
+        takes model and its children and converts it to an xml like list, and then transcribes it to "freecad_urdf.xml"
+
+        REFERENCES:
+        #Sample Turtlebot3 urdf
+        https://github.com/ROBOTIS-GIT/turtlebot3/blob/foxy-devel/turtlebot3_description/urdf/turtlebot3_burger.urdf
+
+        #guide for creating a urdf
+        https://docs.ros.org/en/galactic/Tutorials/Intermediate/URDF/URDF-Main.html
+        """
+        #export as dae since urdf needs to read dae file
+        self.export_self_as_dae()
+
+        urdf_dir = self.urdf_folder + sys.argv[-1]
+        print("URDF_DIR IS %s" % urdf_dir)
+        self_as_urdf = []
+        self_as_urdf.append([0, '<robot name="diff_bot">'])
+        
+        #append this models link to the urdf
+        for l in self.get_self_as_urdf():
+            self_as_urdf.append(l)
+
+        self_as_urdf.append(([0, '']))
+        #append all sub model joints and links to the urdf
+        for sub_model in self.sub_models:
+            #export sub model as dae since urdf needs to read dae file
+            sub_model.export_self_as_dae()
+            self_as_urdf.append([1, '<joint name="%s_joint" type="%s">' % (sub_model.ros_name, sub_model.joint_type)])
+            \
+                self_as_urdf.append([2, '<parent link="%s_link"/>' % self.ros_name])
+            \
+                self_as_urdf.append([2, '<child link="%s_link"/>' % sub_model.ros_name])
+            \
+            self_as_urdf.append([1, '</joint>'])
+            self_as_urdf.append(([0, '']))
+            for l in sub_model.get_self_as_urdf():
+                self_as_urdf.append(l)
+            #whitespace
+            self_as_urdf.append([0, ""])
+        
+        \
+        self_as_urdf.append([0, '</robot>'])
+        
         f = open(urdf_dir, "w")
         for l in self_as_urdf:
             f.write("    " * l[0] + l[1] + "\n")
 
-
     def export_self_as_dae(self):
         """
-        THIS FUNCTION IS NOT READY YET. WAIT FOR BUG FIX IN:
-        https://github.com/FreeCAD/FreeCAD/issues/7989
-
         export self as a .dae model for rviz2
-
-        NOTE
-        ---
-            IF PYCOLLADA IS NOT FOUND, THEN FOLLOW GUIDE TO FIX HERE
-                TODO: 
-                    MAKE THIS FIX AUTOMATIC BY DOWNLOADING FROM GIT AND PUTTING FILE IN BIN AUTOMATICALLY.
-            https://wiki.freecadweb.org/Extra_python_modules#pyCollada
-
-            https://forum.freecadweb.org/viewtopic.php?f=4&t=41949&start=10
         """
-        #dae_folder = "./%s%s.dae" % (models_folder,self.model_name)
-        #print(sys.executable[0:5])
-        if(sys.executable[0:5] == "/snap"):
-            print("FreeCAD installation is a snap. Adding ~/home installation of pycollada to PATHS to bypass pycollada not being in snap(????)")
-            #See -> https://forum.freecadweb.org/viewtopic.php?t=17978
-            sys.path.append(0, sys.argv[sys.argv.__len__() - 1])
-            self.expose_paths()
+        
+        dae_folder = "%s%s.dae" % (self.models_folder,self.ros_name)
 
-            dae_folder = "/home/rydb/projects/group_robot_ros2/freecad_macros/%s.dae" % self.model_name
-            print(dae_folder)
-            import collada
-            
-            print(collada.__file__)
-        #import importDAE
-        #importDAE.export(self.model, dae_folder)
+        try:
+            import importDAE
+        except:
+            print("WARNING: collada likely not installed, attempting fix using freecad.pip util that comes with snap install assuming user installed FreeCAD via snap(where error normally occurs)")
+            os.system("freecad.pip install pycollada")
+            import importDAE
+
+        importDAE.export(self.model, dae_folder)
         
     def expose_paths(self):
         """
@@ -183,16 +269,15 @@ class Model():
             
             print(p)
 
+model_pkg_dir = "%s/src/%s" % (sys.argv[-4], sys.argv[-3]) #"/home/rydb/Projects/group_robot_ros2/src/model_pkg"
+robot_model_dir = "%s/models/%s" % (model_pkg_dir, sys.argv[-2]) #/home/rydb/Projects/group_robot_ros2/src/model_pkg/models/urdfmodel.FCStd"
 
-#going to want to unhard code this later
-robot_model_dir = "/home/rydb/projects/group_robot_ros2/src/model_pkg/models/urdfmodel.FCStd"
-wheel = Model(robot_model_dir, "LeftWheel")
 
-#print("test arg is %s " % sys.argv[sys.argv.__len__() - 1])
-#wheel.export_self_as_dae()
-wheel.define_self_as_urdf()
+wheel_left = Model(model_pkg_dir, robot_model_dir, "LeftWheel", "continuous", "left_wheel")
+wheel_right = Model(model_pkg_dir, robot_model_dir, "RightWheel", "continuous", "right_wheel")
+body = Model(model_pkg_dir, robot_model_dir, "BodyBase", "fixed", "base", sub_models=[wheel_left, wheel_right])
 
-#wheel.expose_paths()
-#print(wheel)
+body.export_self_as_urdf()
+#print("this runs successfully! %s" % sys.argv)
+
 exit()
-#print(wheel)
