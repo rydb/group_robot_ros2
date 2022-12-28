@@ -320,9 +320,9 @@ def create_urdf_of_model(launch_conf: launch_configuration):
     
     pass
 
-create_urdf_of_model(sim_env_conf)
-replace_setup_py(sim_env_conf)
-generate_launch_py(sim_env_conf)
+#create_urdf_of_model(sim_env_conf)
+#replace_setup_py(sim_env_conf)
+#generate_launch_py(sim_env_conf)
 construct_bash_script(sim_env_conf)
 
 

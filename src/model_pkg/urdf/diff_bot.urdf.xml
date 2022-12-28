@@ -1,7 +1,6 @@
 <robot name="diff_bot">
     <link name="base_link">
         <visual>
-            <origin xyz="-4.144832625267252e-20 1.1193780944897578e-18 0.065"/>
             <geometry>
                 <mesh filename="package://model_pkg/models/base.dae"/>
             </geometry>
@@ -9,13 +8,13 @@
     </link>
 
     <joint name="left_wheel_joint" type="continuous">
+        <origin xyz="0.1 0.075 0.065"/>
         <parent link="base_link"/>
         <child link="left_wheel_link"/>
     </joint>
 
     <link name="left_wheel_link">
         <visual>
-            <origin xyz="0.11 0.085 0.065"/>
             <geometry>
                 <mesh filename="package://model_pkg/models/left_wheel.dae"/>
             </geometry>
@@ -23,13 +22,13 @@
     </link>
 
     <joint name="right_wheel_joint" type="continuous">
+        <origin xyz="-0.1 0.075 0.065"/>
         <parent link="base_link"/>
         <child link="right_wheel_link"/>
     </joint>
 
     <link name="right_wheel_link">
         <visual>
-            <origin xyz="-0.10999998474120781 0.08499999999999999 0.06500002622604345"/>
             <geometry>
                 <mesh filename="package://model_pkg/models/right_wheel.dae"/>
             </geometry>

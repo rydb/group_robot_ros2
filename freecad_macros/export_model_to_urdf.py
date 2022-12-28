@@ -1,14 +1,15 @@
 #FreeCad wiki:
 
-
 import os
 import sys
+import numpy as np
 FreeCAD = ""
 try:
     import FreeCAD
     #import importDAE
 
 except:
+    
     pass
 
 #list where packages are installed:
@@ -23,6 +24,17 @@ macro_name = os.path.basename(__file__)
 current_py_file = os.path.basename(__file__)
 
 
+FreeCAD_mode_options = {
+    "cmd": " -c ", # cmd mode is for good for fetching vars from outside scripts.
+    "gui": " ", # gui mode is good for setting up enviorment vars in FreeCAD env without having to manually retype them
+}
+"""
+dict that determines which holds which mode to launch FreeCAD in 
+0 = console mode
+1 = gui mode(crashes when ran. FreeCAD Does not give Verbose errors :/)
+"""
+FreeCAD_mode = "cmd"
+
 """
 FREECAD WIKI FOR COMMANDS
 https://wiki.freecadweb.org/Debugging#Python_Debugging
@@ -32,13 +44,16 @@ if(FreeCAD == ""):
     print("STARTUP: script probably not executed as macro inside FreeCAD. re-running script through freecad")
 
     #runs Freecad via cmd in cmd mode and appends this macro and grabs every sys.argv after first 3 commands and adds that to command
-    final_console_cmd = "freecad -c ./freecad_macros/" + current_py_file
+    final_console_cmd = "freecad %s ./freecad_macros/" % FreeCAD_mode_options[FreeCAD_mode] + current_py_file
     print(sys.argv.__len__())
+
     for i in range(1, sys.argv.__len__()):
         print("APPENDED sys arg " + sys.argv[i])
         final_console_cmd += " " + sys.argv[i]
     print(final_console_cmd)
     os.system(final_console_cmd)
+
+    #exit to prevent errors from FreeCAD not being defined
     exit()
     
 
@@ -51,13 +66,7 @@ class Model():
     ---
         1: FreeCAD's internal model params should NOT be saved as self. Its data clutter. Save relevant individual parts of the model like position to self though.
     """
-    def __init__(self, package_dir: str, model_doc: str, model_name: str, joint_type: str, ros_link_name: str, sub_models=None, color="white"):
-        mm_to_m = 0.001
-        """
-        multiply by this num to get meters version of FreeCAD's default mm measurements.
-        All measurements are stored in mm in FreeCAD(at least in 0.20.1?) in mm regardless of current set measurement unit.
-        """
-
+    def __init__(self, package_dir: str, model_doc_dir: str, model_name: str, joint_type: str, ros_link_name: str, sub_models=None, color="white"):
         self.models_folder = "%s/models/" % package_dir 
         self.urdf_folder = "%s/urdf/" % package_dir
 
@@ -78,12 +87,16 @@ class Model():
                 `package_dir/urdf`
         """
         self.package_name = package_dir.split("/")[-1]
-        self.model_doc = FreeCAD.open(model_doc)
+        
+        self.model_doc_dir = model_doc_dir
+        self.model_doc_name = model_doc_dir.split("/")[-1].replace(".FCStd", "")
+        self.model_doc = FreeCAD.open(model_doc_dir)
         """
         model_doc
         ---
             'Document' object inside FreeCAD which holds models. 
         """
+        
         self.model = self.model_doc.findObjects(Label=model_name)[0]
         """
         model
@@ -122,7 +135,7 @@ class Model():
         all sub models of this model. 
         """
 
-        self.center_xyz = [self.model.Shape.CenterOfMass[0] * mm_to_m, self.model.Shape.CenterOfMass[1] * mm_to_m, self.model.Shape.CenterOfMass[2] * mm_to_m]
+        self.center_xyz = self.unit_to_m([self.model.Shape.CenterOfMass[0], self.model.Shape.CenterOfMass[1], self.model.Shape.CenterOfMass[2]])
         """
         center/centroid of the model:
         ---
@@ -134,13 +147,53 @@ class Model():
         ---
             according to freecad, this is all parent objects which hold the current model in the deisgn
         """
-        self.origin = [self.model.Placement.Base[0] * mm_to_m, self.model.Placement.Base[1] * mm_to_m, self.model.Placement.Base[2] * mm_to_m]
+        self.origin = self.unit_to_m([self.model.Placement.Base[0], self.model.Placement.Base[1], self.model.Placement.Base[2]])
+        if(type(self.model) == Part.Feature):
+            """
+            If the object is a "Part.Feature", then the model is most likely a mirrored object.
+
+            FreeCAD does not give you the placement of a mirrored object, but you can get it from getting the "normal"/perpendicular line of the plane, and the
+            position of the mirror'd object's "source"/parent object and multiplying by the opposite of the normal.
+
+            this will give you the position of the mirrored object. 
+            """
+
+            round_n = 6
+
+            flipped_normal = [round(self.model.Normal[0], round_n), round(self.model.Normal[1], round_n), round(self.model.Normal[2], round_n)]
+            for i in range(0, flipped_normal.__len__()):
+                if float(abs(flipped_normal[i])) == 0.0:
+                    flipped_normal[i] = 1
+                else:
+                    flipped_normal[i] = flipped_normal[i] * -1
+            
+            #normal is a floating point array is extreme rounding errors, fix with above.
+
+            self.origin = self.unit_to_m([self.model.Source.Placement.Base[0] * flipped_normal[0]\
+                , self.model.Source.Placement.Base[1] * flipped_normal[1]\
+                    , self.model.Source.Placement.Base[2] * flipped_normal[2]])
+
         """
         origin:
         ---
             start point of the sketch plane of the model. This CAN be different then centroid and is required to make position math relative to center of the object.
         """
         #export self as dae since urdf needs these models
+
+    def unit_to_m(self, messure_l: list, meassure_type = "mm"):
+        """
+        Take all measurements in an array from `mm` and convert to `m`(by default)
+
+        Defaults to millitmeters since thats FreeCAD default unit for lengths.
+        
+        Add your measurement to measure_to_m if it isn't in there.
+        """
+        round_n = 6 
+        measure_to_m = {
+            "mm": 0.001,
+        }
+        multiplier = measure_to_m[meassure_type]
+        return [round(x * multiplier, round_n) for x in messure_l]
 
     def __repr__(self):
         print("%s SPECS:" % self.model_name)
@@ -168,7 +221,9 @@ class Model():
         \
             l_list.append([2, "<visual>"]) #VISUAL
         \
-                l_list.append([3, "<origin xyz=\"%s %s %s\"/>" % (self.center_xyz[0], self.center_xyz[1], self.center_xyz[2])])   
+                if(self.sub_models == None): # DO NOT SET ORIGIN FOR BASE MODEL SINCE THE ORIGIN FOR THAT SHOULD STAY WHERE IT IS
+                    pass
+                    #l_list.append([3, "<origin xyz=\"%s %s %s\"/>" % (self.center_xyz[0], self.center_xyz[1], self.center_xyz[2])])   
         \
                 l_list.append([3, "<geometry>"]) #GEOMETRY
         \
@@ -191,9 +246,14 @@ class Model():
 
         return l_list
 
-    def export_self_as_urdf(self):
+    def get_intertia_of_self():
+        """
+        extrapolte physics properties of model from self for urdf file
+        """
+
+    def export_self_as_urdf(self, urdf_name="diff_bot.urdf.xml"):
         """"
-        takes model and its children and converts it to an xml like list, and then transcribes it to "freecad_urdf.xml"
+        takes model and its children and converts it to an xml like list, and then transcribes it to file named after urdf_name
 
         REFERENCES:
         #Sample Turtlebot3 urdf
@@ -202,11 +262,12 @@ class Model():
         #guide for creating a urdf
         https://docs.ros.org/en/galactic/Tutorials/Intermediate/URDF/URDF-Main.html
         """
+        print("||URDF EXPORT|| exporting self as urdf..")
         #export as dae since urdf needs to read dae file
         self.export_self_as_dae()
 
-        urdf_dir = self.urdf_folder + sys.argv[-1]
-        print("URDF_DIR IS %s" % urdf_dir)
+        urdf_dir = self.urdf_folder + urdf_name
+        #print("URDF_DIR IS %s" % urdf_dir)
         self_as_urdf = []
         self_as_urdf.append([0, '<robot name="diff_bot">'])
         
@@ -220,6 +281,8 @@ class Model():
             #export sub model as dae since urdf needs to read dae file
             sub_model.export_self_as_dae()
             self_as_urdf.append([1, '<joint name="%s_joint" type="%s">' % (sub_model.ros_name, sub_model.joint_type)])
+            \
+                self_as_urdf.append([2, "<origin xyz=\"%s %s %s\"/>" % (sub_model.origin[0], sub_model.origin[1], sub_model.origin[2])])
             \
                 self_as_urdf.append([2, '<parent link="%s_link"/>' % self.ros_name])
             \
@@ -239,13 +302,16 @@ class Model():
         for l in self_as_urdf:
             f.write("    " * l[0] + l[1] + "\n")
 
+        print("||URDF EXPORT|| finished exporting self ad urdf")
     def export_self_as_dae(self):
         """
         export self as a .dae model for rviz2
         """
-        
+        origin = FreeCAD.Vector(0, 0 , 0)
+        print("||DAE EXPORT|| exporting %s" % self.model_name)
         dae_folder = "%s%s.dae" % (self.models_folder,self.ros_name)
-
+        #documentation of importDAE
+        # https://github.com/FreeCAD/FreeCAD/blob/d35400aae339d71d5fc8c7f767e3be17687fae90/src/Mod/Arch/importDAE.py
         try:
             import importDAE
         except:
@@ -253,7 +319,19 @@ class Model():
             os.system("freecad.pip install pycollada")
             import importDAE
 
-        importDAE.export(self.model, dae_folder)
+        __obj__ = self.model
+
+        if(type(__obj__) == Part.Feature):
+            print("||DAE EXPORT|| obj is feature, assuming this is a mirrored feature untill more part features are added to this")
+            #placement is not in placement for Part.Features, but in .Base?
+            __obj__.Base = origin
+        #Set the object's placement to be at world origin since models are not exported relative to their origin, but to world origin.
+        
+        #by setting the object's position to world origin, the model will be exported relative to it's origin.
+        else:    
+            __obj__.Placement.Base = FreeCAD.Vector(0, 0, 0)
+
+        importDAE.export(__obj__, dae_folder)
         
     def expose_paths(self):
         """
@@ -268,16 +346,50 @@ class Model():
         for p in sys.path:
             
             print(p)
+    def export_self_as_GUI_commands(self):
+        """
+        Picking apart the API for commands requries a macro or entering commands.
+        define self as a model so in a running FreeCAD instance, commands to pick apart the api can be done faster.
+        """
+        doc_name = "doc"
+        cmd_l = []
+        
+        #define document
+        cmd_l.append("%s = FreeCAD.getDocument('%s')" % (doc_name, self.model_doc_name))
 
-model_pkg_dir = "%s/src/%s" % (sys.argv[-4], sys.argv[-3]) #"/home/rydb/Projects/group_robot_ros2/src/model_pkg"
-robot_model_dir = "%s/models/%s" % (model_pkg_dir, sys.argv[-2]) #/home/rydb/Projects/group_robot_ros2/src/model_pkg/models/urdfmodel.FCStd"
+        #define model
+        cmd_l.append("%s = %s.findObjects(Label='%s')[0] " % (self.model_name, doc_name, self.model_name))
+
+        for l in cmd_l:
+            print(l)
+         
+
+
+#if console arguments are detected, then assume this program is run from simple_run.py and therefor has variable PATHS. Otherwise, use hardcoded ones.
+
+project_dir = os.path.dirname(__file__) + "/../"
+"""
+project_dir of hard coded directories. this is not used when this macro is being called from simple_run.py
+"""
+
+model_pkg_dir = "%ssrc/model_pkg" % project_dir
+robot_model_dir = "%ssrc/model_pkg/models/urdfmodel.FCStd" % project_dir
+urdf_dir = "%ssrc/model_pkg/urdf/" % project_dir
+
+if(sys.argv.__len__() < 1):
+    print("Program is being run by external script, using that script's variables, sys.argv is %s" % sys.argv)
+    model_pkg_dir = "%s/src/%s" % (sys.argv[-4], sys.argv[-3]) #"/home/rydb/Projects/group_robot_ros2/src/model_pkg"
+    robot_model_dir = "%s/models/%s" % (model_pkg_dir, sys.argv[-2]) #/home/rydb/Projects/group_robot_ros2/src/model_pkg/models/urdfmodel.FCStd"
 
 
 wheel_left = Model(model_pkg_dir, robot_model_dir, "LeftWheel", "continuous", "left_wheel")
 wheel_right = Model(model_pkg_dir, robot_model_dir, "RightWheel", "continuous", "right_wheel")
 body = Model(model_pkg_dir, robot_model_dir, "BodyBase", "fixed", "base", sub_models=[wheel_left, wheel_right])
 
+#wheel_left.export_self_as_GUI_commands()
+#wheel_right.export_self_as_GUI_commands()
+#wheel_right.export_self_as_dae()
+
 body.export_self_as_urdf()
-#print("this runs successfully! %s" % sys.argv)
 
 exit()
