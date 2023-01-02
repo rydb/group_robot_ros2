@@ -1,0 +1,13 @@
+<robot name="diff_bot">
+    <link name="base_link">
+        <visual>
+            <origin xyz="0.0 0.0 0.0"/>
+            <geometry>
+                <mesh filename="package://model_pkg/models/LeftWheel.dae"/>
+            </geometry>
+            <!--<material name="green">
+                <color rgba="0.2 1 0.2 1.0"/>
+            </material> -->
+        </visual>
+    </link>
+</robot>

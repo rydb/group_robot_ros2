@@ -13,17 +13,15 @@ def generate_launch_description():
 
 
     return LaunchDescription([
+        ExecuteProcess(
+            command=['gazebo', '--verbose', '-s', ],
+            output='screen',
+        ),
         Node(
             package='model_pkg',
             executable='model',
             output='screen',
             parameters=[],
-        ),
-        Node(
-            package='rviz2',
-            executable='rviz2',
-            output='screen',
-            arguments=['-d', share_directory + '/rviz/rviz_config_test.rviz'],
         ),
         Node(
             package='rqt_gui',
