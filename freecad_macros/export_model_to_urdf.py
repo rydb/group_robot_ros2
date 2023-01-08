@@ -1,8 +1,12 @@
 #FreeCad wiki:
 
 import os
+from dataclasses import dataclass
 import sys
 import numpy as np
+import json
+
+
 FreeCAD = ""
 try:
     import FreeCAD
@@ -11,6 +15,15 @@ try:
 except:
     
     pass
+
+#DEPENDENCIES FOR FREECAD MACRO
+try:
+            import trimesh
+            #import pyglet
+except:
+    os.system("freecad.pip install trimesh")
+    import trimesh
+
 
 #list where packages are installed:
 # https://stackoverflow.com/questions/122327/how-do-i-find-the-location-of-my-python-site-packages-directory
@@ -45,18 +58,35 @@ if(FreeCAD == ""):
 
     #runs Freecad via cmd in cmd mode and appends this macro and grabs every sys.argv after first 3 commands and adds that to command
     final_console_cmd = "freecad %s ./freecad_macros/" % FreeCAD_mode_options[FreeCAD_mode] + current_py_file
-    print(sys.argv.__len__())
-
-    for i in range(1, sys.argv.__len__()):
-        print("APPENDED sys arg " + sys.argv[i])
-        final_console_cmd += " " + sys.argv[i]
-    print(final_console_cmd)
     os.system(final_console_cmd)
 
     #exit to prevent errors from FreeCAD not being defined
     exit()
     
+@dataclass
+class Material():
+    """
+    Represents material properties.
+    
+    NOTE: FreeCAD does not appear to have a innate way to give models material properties, so materials will need to be defined here.
 
+    See: https://wiki.freecadweb.org/Material
+    """
+    name: str
+    """name of material"""
+    density: float
+    """
+    density of material in grams per cubic centimeter(g/cc)/(g/cm^3)
+    
+    get density of material from here:
+    https://www.matweb.com/
+    """
+
+
+
+        
+Generic_PETG = Material("PETG", 1.319)
+"""'Generic' PETG. Should be the average of PETG properties"""
 
 class Model():
     """
@@ -66,7 +96,7 @@ class Model():
     ---
         1: FreeCAD's internal model params should NOT be saved as self. Its data clutter. Save relevant individual parts of the model like position to self though.
     """
-    def __init__(self, package_dir: str, model_doc_dir: str, model_name: str, joint_type: str, ros_link_name: str, sub_models=None, color="white"):
+    def __init__(self, package_dir: str, model_doc_dir: str, model_name: str, joint_type: str, ros_link_name: str, material: Material, sub_models=None, color="white"):
         self.models_folder = "%s/models/" % package_dir 
         self.urdf_folder = "%s/urdf/" % package_dir
 
@@ -90,6 +120,7 @@ class Model():
         
         self.model_doc_dir = model_doc_dir
         self.model_doc_name = model_doc_dir.split("/")[-1].replace(".FCStd", "")
+        #print("||DEFINING DOCUMENT|| opening document file: |%s|" % model_doc_dir )
         self.model_doc = FreeCAD.open(model_doc_dir)
         """
         model_doc
@@ -108,12 +139,12 @@ class Model():
         if(self.model_doc.findObjects(Label=model_name).__len__() > 1):
             raise "More then 1 model found with the label %s, throwing error to prevent erros down the line" % model_name
         
+
+
         self.model_name = self.model.Label
-        """
-        model_name
-        ---
-            Name of model's Label in FreeCAD.
-        """
+        """Name of model's Label in FreeCAD."""
+        self.material = material
+        """material of model"""
         self.joint_type = joint_type
         """
         joint type in urdf E.G:
@@ -148,6 +179,11 @@ class Model():
             according to freecad, this is all parent objects which hold the current model in the deisgn
         """
         self.origin = self.unit_to_m([self.model.Placement.Base[0], self.model.Placement.Base[1], self.model.Placement.Base[2]])
+        """
+        origin:
+        ---
+            start point of the sketch plane of the model. This CAN be different then centroid and is required to make position math relative to center of the object.
+        """
         if(type(self.model) == Part.Feature):
             """
             If the object is a "Part.Feature", then the model is most likely a mirrored object.
@@ -173,12 +209,13 @@ class Model():
                 , self.model.Source.Placement.Base[1] * flipped_normal[1]\
                     , self.model.Source.Placement.Base[2] * flipped_normal[2]])
 
-        """
-        origin:
-        ---
-            start point of the sketch plane of the model. This CAN be different then centroid and is required to make position math relative to center of the object.
-        """
-        #export self as dae since urdf needs these models
+
+        self.mesh_location = self.export_self_as_dae()
+        """export mesh to dae and return its location"""
+        self.mesh: trimesh.Trimesh = trimesh.load(self.mesh_location, force="mesh")
+        self.mesh.density = self.material.density
+
+
 
     def unit_to_m(self, messure_l: list, meassure_type = "mm"):
         """
@@ -202,14 +239,65 @@ class Model():
         print("model center: %s " % self.center_xyz)
         print("model parents: %s" % self.parents)
         print("model origin in FreeCAD: %s" % self.origin)
+        print("model document directory is: %s" % self.model_doc_dir)
         return ""
 
-    #def convert_to_m(mm_measure):
-    #    """
-    #   convert FreeCAD's default mm measurements to m.
-    #    Model still exports models to mm regardless of measurement units from tesitng, so this assumes all models are measured in mm
-    #    """
-    #    return mm_measure * 0.001
+
+    def export_self_as_dae(self):
+        """
+        export self as a .dae model for rviz2
+
+        also return location of exported file
+        """
+        origin = FreeCAD.Vector(0, 0 , 0)
+        print("||DAE EXPORT|| exporting %s" % self.model_name)
+        dae_folder = "%s%s.dae" % (self.models_folder,self.ros_name)
+        #documentation of importDAE
+        # https://github.com/FreeCAD/FreeCAD/blob/d35400aae339d71d5fc8c7f767e3be17687fae90/src/Mod/Arch/importDAE.py
+        try:
+            import importDAE
+        except:
+            print("WARNING: collada likely not installed, attempting fix using freecad.pip util that comes with snap install assuming user installed FreeCAD via snap(where error normally occurs)")
+            os.system("freecad.pip install pycollada")
+            import importDAE
+
+        __obj__ = self.model
+
+        if(type(__obj__) == Part.Feature):
+            print("||DAE EXPORT|| obj is feature, assuming this is a mirrored feature untill more part features are added to this")
+            #placement is not in placement for Part.Features, but in .Base?
+            __obj__.Base = origin
+        #Set the object's placement to be at world origin since models are not exported relative to their origin, but to world origin.
+        
+        #by setting the object's position to world origin, the model will be exported relative to it's origin.
+        else:    
+            __obj__.Placement.Base = FreeCAD.Vector(0, 0, 0)
+
+        print("||DAE EXPORT|| finished DAE export")
+        importDAE.export(__obj__, dae_folder)
+
+        return dae_folder
+
+    def symetric_inertia_tensor(self):
+        """
+        get "symetric" inertia tensor of model in SI units.
+        
+        The SI units being either kg.m^2? or g.cm^2?(gazebo doesn't say which??)
+
+        "symetric" meaning only 6 inertia values,
+        `ixx, ixy, ixz,
+        iyy, iyz, izz`
+
+        are nessecary, and not the full inertial tensor.
+
+        See: https://classic.gazebosim.org/tutorials?tut=inertia
+        """
+        #helpful resource: https://towardsdatascience.com/how-to-voxelize-meshes-and-point-clouds-in-python-ca94d403f81    
+
+        #voxelized_mesh: trimesh.voxel.VoxelGrid = mesh.voxelized(0.001)
+        inertia = self.mesh.mass_properties["inertia"]
+        return [inertia[0][0], inertia[0][1], inertia[0][2], inertia[1][1], inertia[1][2], inertia[2][0]]
+        
 
     def get_self_as_urdf(self):
         """
@@ -218,6 +306,20 @@ class Model():
         l_list = []
 
         l_list.append([1 ,"<link name=\"%s_link\">" % self.ros_name])
+        \
+            l_list.append([2, "<inertial>"])
+        \
+                sym_inertia = self.symetric_inertia_tensor()
+        \
+                l_list.append([3, '<mass value="%s"/>' % self.mesh.mass])
+        \
+                l_list.append([3, '<inertia ixx="%s" ixy="%s" ixz="%s" iyy="%s" iyz="%s" izz="%s"/>' % (\
+                    sym_inertia[0], sym_inertia[1], sym_inertia[2], sym_inertia[3], sym_inertia[4], sym_inertia[5])])
+                    #ensure inertia tensor "satisfies the triangle inequality, ie. ixx + iyy >= izz, ixx + izz >= iyy and iyy + izz >= ixx."
+                    #https://physics.stackexchange.com/questions/48266/can-any-physical-rigid-body-be-represented-by-an-ellipsoid-with-the-same-angular/48273#48273
+                    #https://classic.gazebosim.org/tutorials?tut=inertia    
+        \
+            l_list.append([2, "</inertial>"])
         \
             l_list.append([2, "<visual>"]) #VISUAL
         \
@@ -246,11 +348,6 @@ class Model():
 
         return l_list
 
-    def get_intertia_of_self():
-        """
-        extrapolte physics properties of model from self for urdf file
-        """
-
     def export_self_as_urdf(self, urdf_name="diff_bot.urdf.xml"):
         """"
         takes model and its children and converts it to an xml like list, and then transcribes it to file named after urdf_name
@@ -264,8 +361,6 @@ class Model():
         """
         print("||URDF EXPORT|| exporting self as urdf..")
         #export as dae since urdf needs to read dae file
-        self.export_self_as_dae()
-
         urdf_dir = self.urdf_folder + urdf_name
         #print("URDF_DIR IS %s" % urdf_dir)
         self_as_urdf = []
@@ -277,24 +372,24 @@ class Model():
 
         self_as_urdf.append(([0, '']))
         #append all sub model joints and links to the urdf
-        for sub_model in self.sub_models:
-            #export sub model as dae since urdf needs to read dae file
-            sub_model.export_self_as_dae()
-            self_as_urdf.append([1, '<joint name="%s_joint" type="%s">' % (sub_model.ros_name, sub_model.joint_type)])
-            \
-                self_as_urdf.append([2, "<origin xyz=\"%s %s %s\"/>" % (sub_model.origin[0], sub_model.origin[1], sub_model.origin[2])])
-            \
-                self_as_urdf.append([2, '<parent link="%s_link"/>' % self.ros_name])
-            \
-                self_as_urdf.append([2, '<child link="%s_link"/>' % sub_model.ros_name])
-            \
-            self_as_urdf.append([1, '</joint>'])
-            self_as_urdf.append(([0, '']))
-            for l in sub_model.get_self_as_urdf():
-                self_as_urdf.append(l)
-            #whitespace
-            self_as_urdf.append([0, ""])
-        
+        if(self.sub_models != None):
+            for sub_model in self.sub_models:
+                #export sub model as dae since urdf needs to read dae file
+                self_as_urdf.append([1, '<joint name="%s_joint" type="%s">' % (sub_model.ros_name, sub_model.joint_type)])
+                \
+                    self_as_urdf.append([2, "<origin xyz=\"%s %s %s\"/>" % (sub_model.origin[0], sub_model.origin[1], sub_model.origin[2])])
+                \
+                    self_as_urdf.append([2, '<parent link="%s_link"/>' % self.ros_name])
+                \
+                    self_as_urdf.append([2, '<child link="%s_link"/>' % sub_model.ros_name])
+                \
+                self_as_urdf.append([1, '</joint>'])
+                self_as_urdf.append(([0, '']))
+                for l in sub_model.get_self_as_urdf():
+                    self_as_urdf.append(l)
+                #whitespace
+                self_as_urdf.append([0, ""])
+            
         \
         self_as_urdf.append([0, '</robot>'])
         
@@ -303,36 +398,9 @@ class Model():
             f.write("    " * l[0] + l[1] + "\n")
 
         print("||URDF EXPORT|| finished exporting self ad urdf")
-    def export_self_as_dae(self):
-        """
-        export self as a .dae model for rviz2
-        """
-        origin = FreeCAD.Vector(0, 0 , 0)
-        print("||DAE EXPORT|| exporting %s" % self.model_name)
-        dae_folder = "%s%s.dae" % (self.models_folder,self.ros_name)
-        #documentation of importDAE
-        # https://github.com/FreeCAD/FreeCAD/blob/d35400aae339d71d5fc8c7f767e3be17687fae90/src/Mod/Arch/importDAE.py
-        try:
-            import importDAE
-        except:
-            print("WARNING: collada likely not installed, attempting fix using freecad.pip util that comes with snap install assuming user installed FreeCAD via snap(where error normally occurs)")
-            os.system("freecad.pip install pycollada")
-            import importDAE
 
-        __obj__ = self.model
 
-        if(type(__obj__) == Part.Feature):
-            print("||DAE EXPORT|| obj is feature, assuming this is a mirrored feature untill more part features are added to this")
-            #placement is not in placement for Part.Features, but in .Base?
-            __obj__.Base = origin
-        #Set the object's placement to be at world origin since models are not exported relative to their origin, but to world origin.
-        
-        #by setting the object's position to world origin, the model will be exported relative to it's origin.
-        else:    
-            __obj__.Placement.Base = FreeCAD.Vector(0, 0, 0)
-
-        importDAE.export(__obj__, dae_folder)
-        
+        #voxelized_mesh.export(self.ros_name + "_voxelized", file_type="binvox")
     def expose_paths(self):
         """
         Lists helpful debug info related to directories of things:
@@ -364,32 +432,43 @@ class Model():
             print(l)
          
 
-
-#if console arguments are detected, then assume this program is run from simple_run.py and therefor has variable PATHS. Otherwise, use hardcoded ones.
-
-project_dir = os.path.dirname(__file__) + "/../"
-"""
-project_dir of hard coded directories. this is not used when this macro is being called from simple_run.py
-"""
-
-model_pkg_dir = "%ssrc/model_pkg" % project_dir
-robot_model_dir = "%ssrc/model_pkg/models/urdfmodel.FCStd" % project_dir
-urdf_dir = "%ssrc/model_pkg/urdf/" % project_dir
-
-if(sys.argv.__len__() < 1):
-    print("Program is being run by external script, using that script's variables, sys.argv is %s" % sys.argv)
-    model_pkg_dir = "%s/src/%s" % (sys.argv[-4], sys.argv[-3]) #"/home/rydb/Projects/group_robot_ros2/src/model_pkg"
-    robot_model_dir = "%s/models/%s" % (model_pkg_dir, sys.argv[-2]) #/home/rydb/Projects/group_robot_ros2/src/model_pkg/models/urdfmodel.FCStd"
+        
+#get project configs from urdf_file_settings.json
+try:
+    f = open("%s/urdf_file_settings.json" % os.path.dirname(__file__), "r")
+except Exception as e:
+    print("urdf_file_settings.json hasn't been initialized yet. Run simple run's urdf generator once and it will generate it")
+    print(os.getcwd())
+    raise Exception("Actual Exception: " + str(e))
 
 
-wheel_left = Model(model_pkg_dir, robot_model_dir, "LeftWheel", "continuous", "left_wheel")
-wheel_right = Model(model_pkg_dir, robot_model_dir, "RightWheel", "continuous", "right_wheel")
-body = Model(model_pkg_dir, robot_model_dir, "BodyBase", "fixed", "base", sub_models=[wheel_left, wheel_right])
+config = json.load(f)
 
+project_dir = config["project_dir"]
+pkg = config["pkg"]
+FCStd = config["FCStd"]
+urdf_name = config["urdf_name"]
+#"""
+#project_dir of hard coded directories. this is not used when this macro is being called from simple_run.py
+#"""
+
+model_pkg_dir = "%s/src/model_pkg" % project_dir
+robot_model_dir = "%s/src/model_pkg/models/urdfmodel.FCStd" % project_dir
+urdf_dir = "%s/src/model_pkg/urdf/" % project_dir
+
+
+wheel_left = Model(model_pkg_dir, robot_model_dir, "LeftWheel", "continuous", "left_wheel", Generic_PETG)
+wheel_right = Model(model_pkg_dir, robot_model_dir, "RightWheel", "continuous", "right_wheel", Generic_PETG)
+
+#sub_models=[wheel_left, wheel_right]
+body = Model(model_pkg_dir, robot_model_dir, "BodyBase", "fixed", "base", Generic_PETG)
+
+#body.export_self_as_GUI_commands()
 #wheel_left.export_self_as_GUI_commands()
 #wheel_right.export_self_as_GUI_commands()
 #wheel_right.export_self_as_dae()
-
-body.export_self_as_urdf()
+print(body.export_self_as_urdf())
+#print(body)
+#body.export_self_as_urdf()
 
 exit()

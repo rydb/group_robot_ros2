@@ -1,0 +1,19 @@
+Mater Beton,2.4,10.0,adapt Price
+Metal Aluminium (Al),2.7,10.0,adapt Price
+Metal Copper (Cu),8.96,10.0,adapt Price
+Metal Gold (Au),19.3,10.0,Gratis
+Metal Iron (Fe),7.87,10.0,adapt Price
+Metal Lead (Pb),11.35,10.0,adapt Price
+Metal Magnesium (Mg),1.43,10.0,adapt Price
+Metal Nickel (Ni),8.27,10.0,adapt Price
+Metal Pewter (Sn),7.29,10.0,adapt Price
+Metal Platinum (Pt),21.45,10.0,adapt Price
+Metal Silver (Ag),10.5,10.0,adapt Price
+Metal Sodium (Na),0.97,10.0,adapt Price
+Metal Titanium (Ti),4.4,10.0,adapt Price
+Metal Zinc (Zn),7.1,10.0,adapt Price
+Wood Beechwood,0.8,10.0,adapt Price
+Wood MDF,0.75,10.0,adapt Price
+Wood Mahogany,0.6,10.0,adapt Price
+Wood Oak,0.7,10.0,adapt Price
+Wood White pine,0.4,10.0,adapt Price

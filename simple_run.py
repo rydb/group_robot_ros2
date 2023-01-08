@@ -5,14 +5,15 @@ import subprocess
 import glob
 import sys
 import typing
+import json
+#import open3d
+import trimesh
 
 from dataclasses import dataclass
 from typing import Optional
 
-urdf_name = "diff_bot.urdf.xml"
-"""
-urdf_file name. Will want to move this later.
-"""
+#open3d.io.read_triangle_mesh("test.obj")
+print("Hi!")
 
 @dataclass
 class Config():
@@ -28,6 +29,31 @@ class Custom_launch_node():
     node_conf_dict: dict
     """node configuration dictionary """
 
+@dataclass
+class Cmd_Program():
+    """A program to be launched with ROS2 that isn't a package via cmd(E.G: Gazebo, or non-ros package, things)"""
+
+    command: str
+    """
+    command to execute for cmd like utility
+    
+    split parameters with spaces. E.G:
+
+    `gazebo --verbose -s example_world.so`
+    """
+
+    output: Optional[str] = "screen"
+    """output for command line utility"""
+    def as_process_conf_dict(self):
+
+        """launch files represent ros2 packages as dicitionaries. return this package as a dict for that"""
+        result =  {
+            "command": "%s" % self.command.split(" "),
+            "output": "'%s'" % self.output,
+
+        }
+        return result
+        
 @dataclass
 class Package():
     """A ros2 package and its relevant information."""
@@ -85,22 +111,32 @@ class launch_configuration():
     This includes things like launch files, rviz configs, etc..
 
     for sanity sake the only option will be to store all configs in 1 package.
-
-    this package is built by default.
     """
     launch_file: str
-    """The package which will store the launch.py in their /launch directory, and the launch files name"""
+    """The full name of the launch file for this launch configuration. Include the .py extension. E.G:
+        
+        `launch.py`
+    """
+    urdf_file: str
+    """Full name of the urdf file. This should be either a pre-made file or the name of the final generated file from the create_urdf function"""
+
     packages_to_run: typing.List[Package]
     """All packages to be ran by this launch configuration"""
     extra_pkgs_to_build: Optional[typing.List[Package]] = None
     """The packages to be built by colcon in addition to config storing pkg"""
+    external_programs_to_run: Optional[typing.List[Cmd_Program]] = None
+    """External programs to run that aren't ROS2 packages. E.G: Gazebo/Ignition"""
 
 
+gazebo = Cmd_Program("gazebo.gz gazebo")
+"""use:
+    sudo snap install --beta gazebo
+    to install gazebo"""
 model_pkg = Package(None, "model_pkg", "model")
 
-rviz2_config_name = "revamped_rviz_config.rviz"
-
+rviz2_config_name = "rviz_config_test.rviz"
 rviz2_pkg = Package(model_pkg, "rviz2", "rviz2", config=Config(rviz2_config_name), optional_launch_file_node_args= {"arguments": "['-d', share_directory + '/rviz/%s']" % rviz2_config_name})
+
 robot_state_publisher_pkg = Package(model_pkg, "robot_state_publisher", "robot_state_publisher", optional_launch_file_node_args= {"parameters": "[{'use_sim_time': True, 'robot_description': robot_desc}]"})
 rqt_pkg = Package(model_pkg, "rqt_gui", "rqt_gui")
 
@@ -109,18 +145,18 @@ rqt_pkg = Package(model_pkg, "rqt_gui", "rqt_gui")
 real_rviz_env_conf = launch_configuration(
     config_store_pkg=model_pkg,
     launch_file="rviz_config_test_launch.py",
-    packages_to_run=[model_pkg, rviz2_pkg, rqt_pkg]
+    urdf_file="diff_bot.urdf.xml",
+    packages_to_run=[model_pkg, rviz2_pkg, rqt_pkg, robot_state_publisher_pkg],
     )
 """This launch configuration launches rviz alone. Use this when you want to see what a physical robot is doing"""
 
-#gazebo_env_conf = launch_configuration(
-#    {
-#        "model_pkg": "model"
-#    },
-#    ["model_pkg", "gazebo_sim_launch.py"],
-#    ['model_pkg', "gazebo_config_test.rviz"],
-#    launch_gazebo=True,
-#    )
+gazebo_env_conf = launch_configuration(
+    config_store_pkg=model_pkg,
+    launch_file="gazebo_config_test_launch.py",
+    urdf_file="diff_bot.urdf.xml",
+    packages_to_run=[model_pkg, rqt_pkg],
+    external_programs_to_run=[gazebo],
+    )
 """This launch configuration launches gazebo. Use this for physics simulation"""
 
 
@@ -217,7 +253,7 @@ def replace_setup_py(launch_conf: launch_configuration):
             print('WARNING: Expected IGNORE or WRITE, got ' + l[0] + 'treating as IGNORE')
             f.write(f_lines[i])
 
-def generate_launch_py(launch_conf: launch_configuration):
+def generate_launch_py(launch_conf: launch_configuration, ):
     """
     managing launch files is too much mental micromangement, so instead generate launch file to run based on launch_configuration here.
 
@@ -232,7 +268,6 @@ def generate_launch_py(launch_conf: launch_configuration):
     #fetch share directory command, since this needs to be executed as a part of the launch file, append the command to be executed inside the launch file
     package_name_var_name = "package_name"
     share_directory_command = "ament_index_python.packages.get_package_share_directory(%s)" % package_name_var_name
-    urdf_file = urdf_name
 
     screen = "'screen'"
     ###
@@ -255,7 +290,7 @@ def generate_launch_py(launch_conf: launch_configuration):
     launch_l_list = []
 
 
-    print(launch_conf.packages_to_run)
+    #print(launch_conf.packages_to_run)
 
     f = open("./src/%s/launch/%s" % (launch_conf.config_store_pkg.name, launch_conf.launch_file), "w")
     launch_l_list = []
@@ -267,7 +302,7 @@ def generate_launch_py(launch_conf: launch_configuration):
 
     launch_l_list.append([0, "package_name = 'model_pkg'"])
     launch_l_list.append([0, "share_directory = ament_index_python.packages.get_package_share_directory(%s)\n" % package_name_var_name])
-    launch_l_list.append([0, "urdf = share_directory + '/urdf/%s'" % urdf_file])
+    launch_l_list.append([0, "urdf = share_directory + '/urdf/%s'" % launch_conf.urdf_file])
 
     launch_l_list.append([ 0, "def generate_launch_description():"])
     \
@@ -277,17 +312,22 @@ def generate_launch_py(launch_conf: launch_configuration):
     \
         launch_l_list.append([ 1, "return LaunchDescription(["])
     \
-        for command in launch_commands:
-            launch_l_list.append([2, "ExecuteProcess("])
-            for param in command:
-                launch_l_list.append([3, "%s=%s," % (param, command[param])])
-            launch_l_list.append([2, "),"])
+        if(launch_conf.external_programs_to_run != None):
+            for external_prog in launch_conf.external_programs_to_run:
+                launch_l_list.append([2, "ExecuteProcess("])
+
+                program_args = external_prog.as_process_conf_dict()
+                for param in program_args:
+                    launch_l_list.append([3, "%s=%s," % (param, program_args[param])])
+                launch_l_list.append([2, "),"])
     \
         for pkg in launch_conf.packages_to_run:
 
             launch_l_list.append([2, "Node("])
-            for param in pkg.as_node_conf_dict():
-                launch_l_list.append([3, "%s=%s," % (param, pkg[param])])
+
+            node_args = pkg.as_node_conf_dict()
+            for param in node_args:
+                launch_l_list.append([3, "%s=%s," % (param, node_args[param])])
             launch_l_list.append([ 2, "),"])
     \
         launch_l_list.append([ 1, "])"])
@@ -316,14 +356,14 @@ def construct_bash_script(launch_conf: launch_configuration):
 
     #this breaks every package down into seperate strings, adds a space before each package, and then combines them into one new string to append to the bash script
     f.write("colcon build --packages-select" +  \
-        "".join( [" %s" % pkg for pkg in list(launch_conf.packages_to_build.keys())]) + "\n\n" )
+        "".join( [" %s" % pkg.name for pkg in list(launch_conf.packages_to_run)]) + "\n\n" )
 
     #Source ros2, and the newly built package
     f.write("source /opt/ros/foxy/setup.bash\n\n")
     f.write("source install/setup.sh\n\n")
 
     #launch your package's launch file.
-    f.write("ros2 launch %s  %s" % (launch_conf.launch_pkg_n_name[0], launch_conf.launch_pkg_n_name[1]))
+    f.write("ros2 launch %s  %s" % (launch_conf.config_store_pkg.name, launch_conf.launch_file))
     
     #launch the launch file with your desired packages inside
 
@@ -331,24 +371,33 @@ def construct_bash_script(launch_conf: launch_configuration):
     f.close()
     rc = subprocess.call("./%s" % bash_name)
 
-def create_urdf_of_model(launch_conf: launch_configuration):
+def create_urdf_of_model(launch_conf: launch_configuration, macro_folder_location: str, FCStd_name: str, urdf_name: str):
     """
     Take a FreeCAD model, and convert it to a URDF, and place .DAE files of the model inside the package model directory of the rviz config's parent package:
 
     I.E:
         If rviz_config.conf is stored in model_pkg, then auto_urdf.urdf will be stored in model_pkg<the root one>/models
     """
-    model_name = "urdfmodel.FCStd"
-    os.system("python3 freecad_macros/export_model_to_urdf.py %s %s %s %s" % (os.getcwd(), launch_conf.launch_pkg_n_name[0], model_name, urdf_name))
-    
-    pass
+    #)
+    urdf_config_path = "%s/urdf_file_settings.json"  % macro_folder_location
+    f = open(urdf_config_path, "w")
+    #f.write("")
+    params = {
+        "project_dir": os.getcwd(),
+        "pkg": launch_conf.config_store_pkg.name,
+        "FCStd": FCStd_name,
+        "urdf_name": urdf_name,
+    }
+    f.write(json.dumps(params))
+    f.close()
+    os.system("python3 freecad_macros/export_model_to_urdf.py")
 
 env_to_use = real_rviz_env_conf
 """ros2 configuration to use, look at lauch configurations to see what each one does."""
 
 
-#create_urdf_of_model(env_to_use)
-#replace_setup_py(env_to_use)
-generate_launch_py(env_to_use)
-#construct_bash_script(env_to_use)
+#create_urdf_of_model(env_to_use, "freecad_macros", "urdfmodel.FCStd", "diff_bot.urdf.xml")
 
+#replace_setup_py(env_to_use)
+#generate_launch_py(env_to_use)
+#construct_bash_script(env_to_use)

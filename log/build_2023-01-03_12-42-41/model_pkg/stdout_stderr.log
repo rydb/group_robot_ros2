@@ -1,0 +1,57 @@
+running egg_info
+creating ../../build/model_pkg/model_pkg.egg-info
+writing ../../build/model_pkg/model_pkg.egg-info/PKG-INFO
+writing dependency_links to ../../build/model_pkg/model_pkg.egg-info/dependency_links.txt
+writing entry points to ../../build/model_pkg/model_pkg.egg-info/entry_points.txt
+writing requirements to ../../build/model_pkg/model_pkg.egg-info/requires.txt
+writing top-level names to ../../build/model_pkg/model_pkg.egg-info/top_level.txt
+writing manifest file '../../build/model_pkg/model_pkg.egg-info/SOURCES.txt'
+reading manifest file '../../build/model_pkg/model_pkg.egg-info/SOURCES.txt'
+writing manifest file '../../build/model_pkg/model_pkg.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/rydb/Projects/group_robot_ros2/build/model_pkg/build
+creating /home/rydb/Projects/group_robot_ros2/build/model_pkg/build/lib
+creating /home/rydb/Projects/group_robot_ros2/build/model_pkg/build/lib/model_pkg
+copying model_pkg/__init__.py -> /home/rydb/Projects/group_robot_ros2/build/model_pkg/build/lib/model_pkg
+copying model_pkg/model.py -> /home/rydb/Projects/group_robot_ros2/build/model_pkg/build/lib/model_pkg
+running install
+running install_lib
+creating /home/rydb/Projects/group_robot_ros2/install/model_pkg/lib/python3.8/site-packages/model_pkg
+copying /home/rydb/Projects/group_robot_ros2/build/model_pkg/build/lib/model_pkg/__init__.py -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/lib/python3.8/site-packages/model_pkg
+copying /home/rydb/Projects/group_robot_ros2/build/model_pkg/build/lib/model_pkg/model.py -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/lib/python3.8/site-packages/model_pkg
+byte-compiling /home/rydb/Projects/group_robot_ros2/install/model_pkg/lib/python3.8/site-packages/model_pkg/__init__.py to __init__.cpython-38.pyc
+byte-compiling /home/rydb/Projects/group_robot_ros2/install/model_pkg/lib/python3.8/site-packages/model_pkg/model.py to model.cpython-38.pyc
+running install_data
+copying package.xml -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg
+creating /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/model_pkg
+copying model_pkg/__init__.py -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/model_pkg
+copying model_pkg/model.py -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/model_pkg
+creating /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/resource
+copying resource/model_pkg -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/resource
+creating /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/rviz
+copying rviz/rviz_config_test.rviz -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/rviz
+creating /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/test
+copying test/test_pep257.py -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/test
+copying test/test_copyright.py -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/test
+copying test/test_flake8.py -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/test
+creating /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/launch
+copying launch/sample_launch_file.py -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/launch
+copying launch/gazebo_sim_launch.py -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/launch
+copying launch/rviz_config_test_launch.py -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/launch
+copying launch/gazebo_config_test_launch.py -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/launch
+creating /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/models
+copying models/base.dae -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/models
+copying models/urdfmodel.FCStd -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/models
+copying models/right_wheel.dae -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/models
+copying models/left_wheel.dae -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/models
+copying models/urdfmodel.FCStd1 -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/models
+creating /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/urdf
+copying urdf/r2d2.urdf.xml -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/urdf
+copying urdf/diff_bot.urdf.xml -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/urdf
+copying urdf/test.urdf.xml -> /home/rydb/Projects/group_robot_ros2/install/model_pkg/share/model_pkg/urdf
+running install_egg_info
+Copying ../../build/model_pkg/model_pkg.egg-info to /home/rydb/Projects/group_robot_ros2/install/model_pkg/lib/python3.8/site-packages/model_pkg-0.0.0-py3.8.egg-info
+running install_scripts
+Installing model script to /home/rydb/Projects/group_robot_ros2/install/model_pkg/lib/model_pkg
+writing list of installed files to '/home/rydb/Projects/group_robot_ros2/build/model_pkg/install.log'

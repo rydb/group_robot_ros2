@@ -1,36 +1,12 @@
 <robot name="diff_bot">
     <link name="base_link">
+        <inertial>
+            <mass value="0.010288200184753522"/>
+            <inertia ixx="9.165072171516877e-05" ixy="-0.0" ixz="-0.0" iyy="4.8783215835158e-05" iyz="-0.0" izz="-0.0"/>
+        </inertial>
         <visual>
             <geometry>
                 <mesh filename="package://model_pkg/models/base.dae"/>
-            </geometry>
-        </visual>
-    </link>
-
-    <joint name="left_wheel_joint" type="continuous">
-        <origin xyz="0.1 0.075 0.065"/>
-        <parent link="base_link"/>
-        <child link="left_wheel_link"/>
-    </joint>
-
-    <link name="left_wheel_link">
-        <visual>
-            <geometry>
-                <mesh filename="package://model_pkg/models/left_wheel.dae"/>
-            </geometry>
-        </visual>
-    </link>
-
-    <joint name="right_wheel_joint" type="continuous">
-        <origin xyz="-0.1 0.075 0.065"/>
-        <parent link="base_link"/>
-        <child link="right_wheel_link"/>
-    </joint>
-
-    <link name="right_wheel_link">
-        <visual>
-            <geometry>
-                <mesh filename="package://model_pkg/models/right_wheel.dae"/>
             </geometry>
         </visual>
     </link>
