@@ -203,8 +203,8 @@ class Minimal_State_Publisher(Node):
             odom_trans.header.stamp = now.to_msg()
             odom_trans.transform.translation.x = odom_trans.transform.translation.x + \
                 0.01  # cos(angle)*2
+            odom_trans.transform.translation.z = odom_trans.transform.translation.z + 0.01
             odom_trans.transform.translation.y = 0.0  # sin(angle)*2
-            odom_trans.transform.translation.z = 0.0
             odom_trans.transform.rotation = \
                 euler_to_quaternion(0, 0, angle + pi/2)  # roll,pitch,yaw
 
@@ -213,8 +213,8 @@ class Minimal_State_Publisher(Node):
             self.broadcaster.sendTransform(odom_trans)
 
             # set turn for left and right wheels based on <INSERT SOMETHING THAT FETCHES THAT DATA HERE>
-            left_wheel_radians = left_wheel_radians + 0.1
-            right_wheel_radians = right_wheel_radians + 0.1
+            #left_wheel_radians = left_wheel_radians + 0.1
+            #right_wheel_radians = right_wheel_radians + 0.1
             # Create new robot state
             #tilt += tinc
             # if tilt < -0.5 or tilt > 0.0:

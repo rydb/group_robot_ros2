@@ -1,7 +1,11 @@
 #FreeCad wiki:
 
 import os
+import subprocess
 from dataclasses import dataclass
+from abc import ABC, abstractmethod
+import typing
+from typing import Optional
 import sys
 import numpy as np
 import json
@@ -88,6 +92,87 @@ class Material():
 Generic_PETG = Material("PETG", 1.319)
 """'Generic' PETG. Should be the average of PETG properties"""
 
+
+
+@dataclass
+class generic_ros_model():
+    models_folder: str
+    """where models are stored"""
+
+    FCSTD_doc_path: str
+    """Full path of FCSTD which has 3d model"""
+    model_doc_name = FCSTD_doc_path.split("/")[-1].replace(".FCStd", "")
+    """document file name without extension"""
+    model_doc = FreeCAD.open(FCSTD_doc_path)
+    """document file of model as it exists in FreeCAD"""
+    
+    model_name: str
+    """Name of model's label as it exists in FreeCAD. E.G: if model is labeled `BodyBase` This should be `BodyBase`"""
+    model = model_doc.findObjects(Label=model_name)[0]
+    """
+    `!!!POINTER!!!` to model as it exits in FreeCAD.
+    
+     Operations done to this will affect the model it self. SO TREAT THIS AS READ ONLY UNLESS IT IS ABSOLUTELY NESSECARY TO CHANGE THE MODEL """
+    
+    
+    material: Material
+    
+    joint_type: str
+
+    ros_link_name: str
+
+    sub_models: typing.List["generic_ros_model"] = None
+
+    color: str = "white"
+
+    urdf_name: str = "diff_bot.urdf.xml"
+
+    @abstractmethod
+    def get_origin(self):    
+        pass
+
+
+b = generic_ros_model()
+
+
+class generic_model_methods():
+
+    def unit_to_m(self, messure_l: list, meassure_type = "mm"):
+        """
+        Take all measurements in an array from `mm` and convert to `m`(by default)f
+
+        Defaults to millitmeters since thats FreeCAD default unit for lengths.
+        
+        Add your measurement to measure_to_m if it isn't in there.
+        """
+        round_n = 6 
+        measure_to_m = {
+            "mm": 0.001,
+        }
+        multiplier = measure_to_m[meassure_type]
+        
+        #print("|||ROUNDING NUMBER||| %s" % messure_l)
+        return [round(x * multiplier, round_n) for x in messure_l]
+
+    @abstractmethod
+    def get_origin(model):
+        """return input FreeCAD model's origin """
+        return
+    @abstractmethod
+    def export_as_DAE(model):
+        """export input FreeCAD model as DAE"""
+        return
+    
+
+class PartDesign_Body(generic_model_methods):
+    def get_origin(model: FreeCAD.model):
+        return super().unit_to_m([model.Placement.Base[0], model.Placement.Base[1], model.Placement.Base[2]])
+
+class Part_Feature(generic_model_methods):
+    pass
+
+b = PartDesign_Body
+b.get_origin()
 class Model():
     """
     Save everything relevant about them model here, and document any particular parameters here as well since FreeCAD has no IDE integration :<
@@ -96,10 +181,10 @@ class Model():
     ---
         1: FreeCAD's internal model params should NOT be saved as self. Its data clutter. Save relevant individual parts of the model like position to self though.
     """
-    def __init__(self, package_dir: str, model_doc_dir: str, model_name: str, joint_type: str, ros_link_name: str, material: Material, sub_models=None, color="white"):
+    def __init__(self, package_dir: str, model_doc_dir: str, model_name: str, joint_type: str, ros_link_name: str, material: Material, sub_models=None, color="white", urdf_name="diff_bot.urdf.xml"):
         self.models_folder = "%s/models/" % package_dir 
         self.urdf_folder = "%s/urdf/" % package_dir
-
+        self.urdf_name = urdf_name
 
         self.package_dir = package_dir
         """
@@ -132,7 +217,7 @@ class Model():
         """
         model
         ---
-            This is the model as it exists in FreeCAD.
+            This is a `!!!POINTER!!!` to this model as it exists in freecad(all operations executed on this will be reflected in FreeCAD)
 
             when FreeCad does 'findObjects', or when refering to model variables stored in FreeCAD, this is what to reference.
         """
@@ -194,20 +279,7 @@ class Model():
             this will give you the position of the mirrored object. 
             """
 
-            round_n = 6
-
-            flipped_normal = [round(self.model.Normal[0], round_n), round(self.model.Normal[1], round_n), round(self.model.Normal[2], round_n)]
-            for i in range(0, flipped_normal.__len__()):
-                if float(abs(flipped_normal[i])) == 0.0:
-                    flipped_normal[i] = 1
-                else:
-                    flipped_normal[i] = flipped_normal[i] * -1
-            
-            #normal is a floating point array is extreme rounding errors, fix with above.
-
-            self.origin = self.unit_to_m([self.model.Source.Placement.Base[0] * flipped_normal[0]\
-                , self.model.Source.Placement.Base[1] * flipped_normal[1]\
-                    , self.model.Source.Placement.Base[2] * flipped_normal[2]])
+            self.origin = self.mirrored_origin()
 
 
         self.mesh_location = self.export_self_as_dae()
@@ -216,10 +288,67 @@ class Model():
         self.mesh.density = self.material.density
 
 
+    def mirrored_origin(self):
+        """
+        get origin for mirrored objects through this since FreeCAD does not let you just fetch that sanely :)))
+        
+        If the object is a "Part.Feature", then the model is most likely a mirrored object.
+
+        FreeCAD does not give you the placement of a mirrored object, but you can get it from getting the "normal"/perpendicular line of the plane, and the
+        position of the mirror'd object's "source"/parent object and multiplying by the opposite of the normal.
+
+        this will give you the position of the mirrored object. 
+        """
+        round_n = 6
+
+        flipped_normal = [round(self.model.Normal[0], round_n), round(self.model.Normal[1], round_n), round(self.model.Normal[2], round_n)]
+        for i in range(0, flipped_normal.__len__()):
+            if float(abs(flipped_normal[i])) == 0.0:
+                flipped_normal[i] = 1
+            else:
+                flipped_normal[i] = flipped_normal[i] * -1
+        
+        #normal is a floating point array is extreme rounding errors, fix with above.
+
+        return self.unit_to_m([self.model.Source.Placement.Base[0] * flipped_normal[0]\
+            , self.model.Source.Placement.Base[1] * flipped_normal[1]\
+                , self.model.Source.Placement.Base[2] * flipped_normal[2]])
+
+    def mirrored_object_base_for_origin(self):
+        """
+        mirrored object placement for moving the mirrored object to document origin
+
+        I've found the formula of:
+            `parent_placement - (parent_placement * (-2(-1 * normal) - 2) )`
+
+        manages to set mirrored object's to their world origin. 
+
+        """
+        round_n = 6
+
+        parent_x: float = self.model.Source.Placement.Base[0]
+        normal_x: float = round(self.model.Normal[0], round_n)
+
+        parent_y: float = self.model.Source.Placement.Base[1]
+        normal_y: float = round(self.model.Normal[1], round_n)
+
+        parent_z: float = self.model.Source.Placement.Base[2]
+        normal_z: float = round(self.model.Normal[2], round_n)
+
+        print("parents are %s" % ([parent_x, parent_y, parent_z]))
+        print("normals are %s" % [normal_x, normal_y, normal_z])
+        
+        base_x: float = parent_x + (parent_x * (-2 * (-1 * normal_x) - 2))
+        base_y: float = parent_y + (parent_y * (-2 * (-1 * normal_y) - 2))
+        base_z: float = parent_z + (parent_z * (-2 * (-1 * normal_z) - 2))
+
+
+        print("base is %s" % [base_x, base_y, base_z])
+        return FreeCAD.Vector(base_x, base_y, base_z)
 
     def unit_to_m(self, messure_l: list, meassure_type = "mm"):
         """
-        Take all measurements in an array from `mm` and convert to `m`(by default)
+        Take all measurements in an array from `mm` and convert to `m`(by default)f
 
         Defaults to millitmeters since thats FreeCAD default unit for lengths.
         
@@ -230,6 +359,8 @@ class Model():
             "mm": 0.001,
         }
         multiplier = measure_to_m[meassure_type]
+        
+        #print("|||ROUNDING NUMBER||| %s" % messure_l)
         return [round(x * multiplier, round_n) for x in messure_l]
 
     def __repr__(self):
@@ -248,6 +379,9 @@ class Model():
         export self as a .dae model for rviz2
 
         also return location of exported file
+
+        NOTE: it appears __obj__ is a POINTER to self.model and not a new object that equals it.
+        all operations done will have to be undone in order to preserve the model :))))
         """
         origin = FreeCAD.Vector(0, 0 , 0)
         print("||DAE EXPORT|| exporting %s" % self.model_name)
@@ -260,29 +394,30 @@ class Model():
             print("WARNING: collada likely not installed, attempting fix using freecad.pip util that comes with snap install assuming user installed FreeCAD via snap(where error normally occurs)")
             os.system("freecad.pip install pycollada")
             import importDAE
-
-        __obj__ = self.model
-
-        if(type(__obj__) == Part.Feature):
+        if(type(self.model) == Part.Feature):
             print("||DAE EXPORT|| obj is feature, assuming this is a mirrored feature untill more part features are added to this")
-            #placement is not in placement for Part.Features, but in .Base?
-            __obj__.Base = origin
+            old_val = self.model.Placement.Base
+            self.model.Placement.Base = self.mirrored_object_base_for_origin()
+            importDAE.export(self.model, dae_folder)
+            self.model.Placement.Base = old_val
         #Set the object's placement to be at world origin since models are not exported relative to their origin, but to world origin.
         
         #by setting the object's position to world origin, the model will be exported relative to it's origin.
         else:    
-            __obj__.Placement.Base = FreeCAD.Vector(0, 0, 0)
+            old_val = self.model.Placement.Base
+            self.model.Placement.Base = origin
+            importDAE.export(self.model, dae_folder)
+            self.model.Placement.Base = old_val
+            
 
         print("||DAE EXPORT|| finished DAE export")
-        importDAE.export(__obj__, dae_folder)
-
+        
+        #del(__obj__)
         return dae_folder
 
     def symetric_inertia_tensor(self):
         """
-        get "symetric" inertia tensor of model in SI units.
-        
-        The SI units being either kg.m^2? or g.cm^2?(gazebo doesn't say which??)
+        get "symetric" inertia tensor of model in kg/m^2
 
         "symetric" meaning only 6 inertia values,
         `ixx, ixy, ixz,
@@ -296,7 +431,16 @@ class Model():
 
         #voxelized_mesh: trimesh.voxel.VoxelGrid = mesh.voxelized(0.001)
         inertia = self.mesh.mass_properties["inertia"]
-        return [inertia[0][0], inertia[0][1], inertia[0][2], inertia[1][1], inertia[1][2], inertia[2][0]]
+        d = 6
+
+        #remove 'e' from number and remove inertia
+        return [
+            '%f' % inertia[0][0],
+                '%f' % inertia[0][1],
+                '%f' % inertia[0][2],
+                '%f' % inertia[1][1],
+                '%f' % inertia[1][2],
+                '%f' % inertia[2][0]]
         
 
     def get_self_as_urdf(self):
@@ -310,6 +454,9 @@ class Model():
             l_list.append([2, "<inertial>"])
         \
                 sym_inertia = self.symetric_inertia_tensor()
+        \
+                pass
+                #l_list.append([3, '<origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>'])
         \
                 l_list.append([3, '<mass value="%s"/>' % self.mesh.mass])
         \
@@ -347,10 +494,21 @@ class Model():
         l_list.append([1, "</link>"])
 
         return l_list
+    def export_self_as_sdf(self):
+        """exports the current model and its children to sdf using gazebo.gz(gazebo snapcraft console utiltiy)'s urdf to sdf console utility """
+        urdf_path = self.urdf_folder + self.urdf_name
+        #if(os.path.exists(urdf_path) == False):
+        #    print('||EXPORT TO SDF|| urdf file of model does not exist yet. Creating it now.')
 
-    def export_self_as_urdf(self, urdf_name="diff_bot.urdf.xml"):
+        self.export_self_as_urdf()
+        print("full command %s" % "gazebo.gz sdf -p %s > %s" % (urdf_path, urdf_path + ".sdf"))
+        #os.system("gazebo.gz sdf -p %s > %s" % (urdf_path, urdf_path + ".sdf"))
+
+    def export_self_as_urdf(self):
         """"
         takes model and its children and converts it to an xml like list, and then transcribes it to file named after urdf_name
+
+        then, returns the file path of the saved urdf.
 
         REFERENCES:
         #Sample Turtlebot3 urdf
@@ -361,7 +519,7 @@ class Model():
         """
         print("||URDF EXPORT|| exporting self as urdf..")
         #export as dae since urdf needs to read dae file
-        urdf_dir = self.urdf_folder + urdf_name
+        urdf_dir = self.urdf_folder + self.urdf_name
         #print("URDF_DIR IS %s" % urdf_dir)
         self_as_urdf = []
         self_as_urdf.append([0, '<robot name="diff_bot">'])
@@ -398,6 +556,7 @@ class Model():
             f.write("    " * l[0] + l[1] + "\n")
 
         print("||URDF EXPORT|| finished exporting self ad urdf")
+        #return urdf_dir
 
 
         #voxelized_mesh.export(self.ros_name + "_voxelized", file_type="binvox")
@@ -460,15 +619,23 @@ urdf_dir = "%s/src/model_pkg/urdf/" % project_dir
 wheel_left = Model(model_pkg_dir, robot_model_dir, "LeftWheel", "continuous", "left_wheel", Generic_PETG)
 wheel_right = Model(model_pkg_dir, robot_model_dir, "RightWheel", "continuous", "right_wheel", Generic_PETG)
 
-#sub_models=[wheel_left, wheel_right]
-body = Model(model_pkg_dir, robot_model_dir, "BodyBase", "fixed", "base", Generic_PETG)
 
-#body.export_self_as_GUI_commands()
+#sub_models=[wheel_left, wheel_right]
+body = Model(model_pkg_dir, robot_model_dir, "BodyBase", "fixed", "base", Generic_PETG, sub_models=[wheel_right, wheel_left])
+
+#print(wheel_right)
 #wheel_left.export_self_as_GUI_commands()
 #wheel_right.export_self_as_GUI_commands()
-#wheel_right.export_self_as_dae()
-print(body.export_self_as_urdf())
-#print(body)
-#body.export_self_as_urdf()
 
+
+#print(wheel_right.model.Placement)
+body.export_self_as_sdf()
+
+
+print(wheel_right.origin)
 exit()
+
+
+#100 + (100 * (-2(-1 * n_x) - 2))
+#75 + (75 * (-2(-1 * n_y) - 2))
+#65 + (75 * (-2(-1 * n_z) - 2))

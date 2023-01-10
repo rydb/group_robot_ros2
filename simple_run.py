@@ -78,6 +78,9 @@ class Package():
     output: Optional[str] = "screen"
     """output for package, used in launch file"""
 
+    build: Optional[bool] = False
+    """weather colcon builds this package. is set to no by default"""
+
     optional_launch_file_node_args: Optional[typing.Dict[str, str]] = None
 
     
@@ -132,7 +135,7 @@ gazebo = Cmd_Program("gazebo.gz gazebo")
 """use:
     sudo snap install --beta gazebo
     to install gazebo"""
-model_pkg = Package(None, "model_pkg", "model")
+model_pkg = Package(None, "model_pkg", "model", build=True)
 
 rviz2_config_name = "rviz_config_test.rviz"
 rviz2_pkg = Package(model_pkg, "rviz2", "rviz2", config=Config(rviz2_config_name), optional_launch_file_node_args= {"arguments": "['-d', share_directory + '/rviz/%s']" % rviz2_config_name})
@@ -355,8 +358,13 @@ def construct_bash_script(launch_conf: launch_configuration):
     #apparently you can do list comprehension on string formatting. neat
 
     #this breaks every package down into seperate strings, adds a space before each package, and then combines them into one new string to append to the bash script
+    pkgs_to_build = []
+    for pkg in launch_conf.packages_to_run:
+        if pkg.build == True:
+            pkgs_to_build.append(pkg)
+
     f.write("colcon build --packages-select" +  \
-        "".join( [" %s" % pkg.name for pkg in list(launch_conf.packages_to_run)]) + "\n\n" )
+        "".join( [" %s" % pkg.name for pkg in list(pkgs_to_build)]) + "\n\n" )
 
     #Source ros2, and the newly built package
     f.write("source /opt/ros/foxy/setup.bash\n\n")
@@ -396,8 +404,4 @@ env_to_use = real_rviz_env_conf
 """ros2 configuration to use, look at lauch configurations to see what each one does."""
 
 
-#create_urdf_of_model(env_to_use, "freecad_macros", "urdfmodel.FCStd", "diff_bot.urdf.xml")
-
-#replace_setup_py(env_to_use)
-#generate_launch_py(env_to_use)
-#construct_bash_script(env_to_use)
+construct_bash_script(env_to_use)
