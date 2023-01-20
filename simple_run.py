@@ -57,7 +57,7 @@ gazebo = Cmd_Program("gazebo.gz gazebo")
 """use:
     sudo snap install --beta gazebo
     to install gazebo"""
-model_pkg = Package(None, "model_pkg", "model", build=True)
+model_pkg = Package(None, "model_pkg", "model", build=True, urdf_name="diff_bot.urdf.xml")
 #model_pkg.config = Config(model_pkg.folder_path())
 
 rviz2_config_name = "rviz_config_test.rviz"
@@ -329,12 +329,21 @@ env_to_use = real_rviz_env_conf
 def launch_gazebo_world(launch_conf: launch_configuration):
     """generate an urdf file, convert that to an sdf file, then launch that sdf file."""
     create_urdf_of_model(env_to_use, freecad_macros_folder_name, model_file_name, launch_conf.urdf_file)
-    sdf_path =  "%s%s.sdf" % (launch_conf.config_store_pkg.config.urdf_folder_path)
-    os.system("gazebo.gz sdf -p %s > %s" % (launch_conf.urdf_file, sdf_path))
+    sdf_path =  "%s.sdf" % launch_conf.config_store_pkg.urdf_path
+    final_command = "gazebo.gz sdf -p %s" % (launch_conf.config_store_pkg.urdf_path)
+    #test_command = "echo 'hi' > test.txt"
+    #print("\n" + final_command)
+    #subprocess.call(["gazebo", "sdf", "-p", launch_conf.config_store_pkg.urdf_path, ">", sdf_path])
+    p = subprocess.check_output(final_command, shell=True)
+    s = ''.join(map(chr, p))
+    f = open(sdf_path, "w")
+    f.write(s)
+
+    
 #os.system("python3 freecad_macros/export_model_to_urdf.py")
 #os.system("gazebo.gz service -s /world/empty/create --reqtype ignition.msgs.EntityFactory --reptype ignition.msgs.Boolean --timeout 1000 --req 'sdf_filename: \"")
 
 #construct_bash_script(env_to_use)
-#launch_gazebo_world(env_to_use)
-construct_bash_script(env_to_use)
+launch_gazebo_world(env_to_use)
+#construct_bash_script(env_to_use)
 

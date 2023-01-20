@@ -4,9 +4,9 @@ from typing import Optional
 import os
 import numpy as np
 
-
+#!!!RELATIVE IMPORTS MUST HAVE A DOT OR THEY THROW AN ERROR WHEN THE FILE IMPORTING THE IMPORTING FILE TRYS THE IMPORT THE IMPORTING FILE!!!
 from .Config import Config
-PROJECT_DIRECTORY = os.getcwd()
+PROJECT_DIRECTORY = os.getcwd() + "/"
 
 
 class Package():
@@ -58,13 +58,18 @@ class Package():
     @property
     def urdf_folder(self):
         """return urdf folder absolute path"""
-        return "%s%s%s/%s" % (local_directory_for["PROJECT_DIRECTORY"],local_directory_for["PACKAGES"], self.name, local_directory_for["URDFS"])
-
+        if(self.urdf_name !=  None):
+            return "%s%s%s/%s" % (local_directory_for["PROJECT_DIRECTORY"],local_directory_for["PACKAGES"], self.name, local_directory_for["URDFS"])
+        else:
+            raise "NO URDF FILE HAS BEEN DECLARED FOR THIS PACKAGE, SET THE URDF'S FILE NAME ONE WHEN INITIALIZING THIS PACKAGE IF THIS PACKAGE IS MEANT TO HAVE ONE. THROWING ERORR TO PREVENT UNKNOWN BEHAVIOUR"
+    
     @property
     def urdf_path(self):
         """return urdf file absoltue path"""
-        return self.urdf_folder + self.urdf_name
-
+        if(self.urdf_name !=  None):
+            return self.urdf_folder + self.urdf_name
+        else:
+            raise "NO URDF FILE HAS BEEN DECLARED FOR THIS PACKAGE, SET THE URDF'S FILE NAME ONE WHEN INITIALIZING THIS PACKAGE IF THIS PACKAGE IS MEANT TO HAVE ONE. THROWING ERORR TO PREVENT UNKNOWN BEHAVIOUR"
 
 
     
