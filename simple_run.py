@@ -12,94 +12,16 @@ import trimesh
 from dataclasses import dataclass
 from typing import Optional
 
-#open3d.io.read_triangle_mesh("test.obj")
+from classes.Package import Package
+from classes.Cmd_Program import Cmd_Program
+from classes.Config import Config
+
+freecad_macros_folder_name = "freecad_macros"
+model_file_name = "urdfmodel.FCStd"
+"""name of model file"""
+PROJECT_DIRECTORY = "/home/rydb/Projects/group_robot_ros2"
+"""root directory of ros2 project. should make this not hard coded later"""
 print("Hi!")
-
-@dataclass
-class Config():
-    """A ros2 package's config information"""
-
-    config_file_name: str
-    """name of configuration file for this configuration"""
-
-
-@dataclass
-class Custom_launch_node():
-    """Custom launch node configuration for packages which don't have standard parameters for their launch file. Stuff like rviz2 for example, which uses arguements and not parameters"""
-    node_conf_dict: dict
-    """node configuration dictionary """
-
-@dataclass
-class Cmd_Program():
-    """A program to be launched with ROS2 that isn't a package via cmd(E.G: Gazebo, or non-ros package, things)"""
-
-    command: str
-    """
-    command to execute for cmd like utility
-    
-    split parameters with spaces. E.G:
-
-    `gazebo --verbose -s example_world.so`
-    """
-
-    output: Optional[str] = "screen"
-    """output for command line utility"""
-    def as_process_conf_dict(self):
-
-        """launch files represent ros2 packages as dicitionaries. return this package as a dict for that"""
-        result =  {
-            "command": "%s" % self.command.split(" "),
-            "output": "'%s'" % self.output,
-
-        }
-        return result
-        
-@dataclass
-class Package():
-    """A ros2 package and its relevant information."""
-
-    parent_pkg: "Package"
-    """string name of ros2 package that is parent of this package."""
-    name: str
-    """name of this package"""
-    executable_name: str
-    """
-    name of executable used by package. In a ros2 package, this is generally the name of the file executing code,
-        E.G:
-        in model_pkg:
-            `model_pkg -> src -> model_pkg -> model.py`
-            is package executable, so
-
-            `model` is executable_name
-    """ 
-    config: Optional[Config] = None
-    """config info about this package if relevant"""
-
-    output: Optional[str] = "screen"
-    """output for package, used in launch file"""
-
-    build: Optional[bool] = False
-    """weather colcon builds this package. is set to no by default"""
-
-    optional_launch_file_node_args: Optional[typing.Dict[str, str]] = None
-
-    
-
-    """optional arguements to be a part of the launch file node list. Set this for packages with custom node arguements like rviz2."""
-    def as_node_conf_dict(self):
-
-        """launch files represent ros2 packages as dicitionaries. return this package as a dict for that"""
-        result =  {
-            "package": "'%s'" % self.name,
-            "executable": "'%s'" % self.executable_name,
-            "output": "'%s'" % self.output,
-            "parameters": "[]"
-
-        }
-        if(self.optional_launch_file_node_args != None):
-            result.update(self.optional_launch_file_node_args)
-        return result
-
 
 
 @dataclass
@@ -136,9 +58,10 @@ gazebo = Cmd_Program("gazebo.gz gazebo")
     sudo snap install --beta gazebo
     to install gazebo"""
 model_pkg = Package(None, "model_pkg", "model", build=True)
+#model_pkg.config = Config(model_pkg.folder_path())
 
 rviz2_config_name = "rviz_config_test.rviz"
-rviz2_pkg = Package(model_pkg, "rviz2", "rviz2", config=Config(rviz2_config_name), optional_launch_file_node_args= {"arguments": "['-d', share_directory + '/rviz/%s']" % rviz2_config_name})
+rviz2_pkg = Package(model_pkg, "rviz2", "rviz2", config=Config(config_file_name=rviz2_config_name), optional_launch_file_node_args= {"arguments": "['-d', share_directory + '/rviz/%s']" % rviz2_config_name})
 
 robot_state_publisher_pkg = Package(model_pkg, "robot_state_publisher", "robot_state_publisher", optional_launch_file_node_args= {"parameters": "[{'use_sim_time': True, 'robot_description': robot_desc}]"})
 rqt_pkg = Package(model_pkg, "rqt_gui", "rqt_gui")
@@ -403,5 +326,15 @@ def create_urdf_of_model(launch_conf: launch_configuration, macro_folder_locatio
 env_to_use = real_rviz_env_conf
 """ros2 configuration to use, look at lauch configurations to see what each one does."""
 
+def launch_gazebo_world(launch_conf: launch_configuration):
+    """generate an urdf file, convert that to an sdf file, then launch that sdf file."""
+    create_urdf_of_model(env_to_use, freecad_macros_folder_name, model_file_name, launch_conf.urdf_file)
+    sdf_path =  "%s%s.sdf" % (launch_conf.config_store_pkg.config.urdf_folder_path)
+    os.system("gazebo.gz sdf -p %s > %s" % (launch_conf.urdf_file, sdf_path))
+#os.system("python3 freecad_macros/export_model_to_urdf.py")
+#os.system("gazebo.gz service -s /world/empty/create --reqtype ignition.msgs.EntityFactory --reptype ignition.msgs.Boolean --timeout 1000 --req 'sdf_filename: \"")
 
+#construct_bash_script(env_to_use)
+#launch_gazebo_world(env_to_use)
 construct_bash_script(env_to_use)
+
