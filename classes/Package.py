@@ -44,13 +44,29 @@ class Package():
 
         #self.urdf_path: str = self.urdf_folder + self.urdf_name
 
-        output: Optional[str] = output
+        self.output: Optional[str] = output
         """output for package, used in launch file"""
 
         self.build: Optional[bool] = build
         """weather colcon builds this package. is set to no by default"""
 
         self.optional_launch_file_node_args: Optional[typing.Dict[str, str]] = optional_launch_file_node_args
+
+
+    """optional arguements to be a part of the launch file node list. Set this for packages with custom node arguements like rviz2."""
+    def as_node_conf_dict(self):
+
+        """launch files represent ros2 packages as dicitionaries. return this package as a dict for that"""
+        result =  {
+            "package": "'%s'" % self.name,
+            "executable": "'%s'" % self.executable_name,
+            "output": "'%s'" % self.output,
+            "parameters": "[]"
+
+        }
+        if(self.optional_launch_file_node_args != None):
+            result.update(self.optional_launch_file_node_args)
+        return 
 
     def __repr__(self):
         return str(self.__dict__)

@@ -10,6 +10,8 @@ import sys
 import numpy as np
 import json
 
+from ..classes.logger import return_logger
+
 
 ###
 # PRE-FREECAD MACRO STARTUP AREA
@@ -79,6 +81,28 @@ except:
     os.system("freecad.pip install trimesh")
     import importDAE
     import trimesh
+
+###
+# Config load area
+###
+
+
+try:
+    f = open("%s/urdf_file_settings.json" % os.path.dirname(__file__), "r")
+except Exception as e:
+    print("urdf_file_settings.json hasn't been initialized yet. Run simple run's urdf generator once and it will generate it")
+    print(os.getcwd())
+    raise Exception("Actual Exception: " + str(e))
+
+
+config = json.load(f)
+
+project_dir = config["project_dir"]
+pkg = config["pkg"]
+FCStd = config["FCStd"]
+urdf_name = config["urdf_name"]
+logger = return_logger(config["log_path"], "a")
+
 
 @dataclass
 class Material():
@@ -575,20 +599,7 @@ class Model():
 
         
 #get project configs from urdf_file_settings.json
-try:
-    f = open("%s/urdf_file_settings.json" % os.path.dirname(__file__), "r")
-except Exception as e:
-    print("urdf_file_settings.json hasn't been initialized yet. Run simple run's urdf generator once and it will generate it")
-    print(os.getcwd())
-    raise Exception("Actual Exception: " + str(e))
 
-
-config = json.load(f)
-
-project_dir = config["project_dir"]
-pkg = config["pkg"]
-FCStd = config["FCStd"]
-urdf_name = config["urdf_name"]
 #"""
 #project_dir of hard coded directories. this is not used when this macro is being called from simple_run.py
 #"""

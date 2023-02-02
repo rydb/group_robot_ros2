@@ -6,24 +6,28 @@ import glob
 import sys
 import typing
 import json
-#import open3d
 import trimesh
-
+import logging
+import inspect
 from dataclasses import dataclass
 from typing import Optional
 
 from classes.Package import Package
 from classes.Cmd_Program import Cmd_Program
 from classes.Config import Config
+from classes.logger import return_logger
 
 freecad_macros_folder_name = "freecad_macros"
 model_file_name = "urdfmodel.FCStd"
 """name of model file"""
-PROJECT_DIRECTORY = "/home/rydb/Projects/group_robot_ros2"
+PROJECT_DIRECTORY = "/home/rydb/Projects/group_robot_ros2/"
 """root directory of ros2 project. should make this not hard coded later"""
-print("Hi!")
+log_path =  "%ssimple_run_logs/simple_run.log" % PROJECT_DIRECTORY
+"""path of log file for simple_run"""
 
 
+logger = return_logger(log_path, logger_write_mode="w")
+"""logger for simple_run"""
 @dataclass
 class launch_configuration():
     """
@@ -55,7 +59,7 @@ class launch_configuration():
 
 gazebo = Cmd_Program("gazebo.gz gazebo")
 """use:
-    sudo snap install --beta gazebo
+    `sudo snap install --beta gazebo`
     to install gazebo"""
 model_pkg = Package(None, "model_pkg", "model", build=True, urdf_name="diff_bot.urdf.xml")
 #model_pkg.config = Config(model_pkg.folder_path())
@@ -91,8 +95,10 @@ def replace_setup_py(launch_conf: launch_configuration):
     adds EVERY folder in each package_to_build to their /share directorys for each setup.py
 
     ROS2 requires everything it uses to be in the /share directory, so for the sake of saving headaches, pre-emptively add EVERYTHING to it. 
+
+    BUG: multi-nested folders do not currently work, I will want to fix that
     """
-    
+    logger.debug("replacing setup.py with auto-generated one based on existing files in launch_conf config package")
     tab = "    "
 
     directory_of_file = "src/%s/" % launch_conf.config_store_pkg.name
@@ -179,9 +185,11 @@ def replace_setup_py(launch_conf: launch_configuration):
             print('WARNING: Expected IGNORE or WRITE, got ' + l[0] + 'treating as IGNORE')
             f.write(f_lines[i])
 
+    logger.debug("finished replacing setup.py with generated one.")
+
 def generate_launch_py(launch_conf: launch_configuration, ):
     """
-    managing launch files is too much mental micromangement, so instead generate launch file to run based on launch_configuration here.
+    generate a launch file based on launch_conf
 
     collects:
         1: all packages that are being built, 
@@ -190,6 +198,7 @@ def generate_launch_py(launch_conf: launch_configuration, ):
 
     and then creates a launch.py file based off of those parameters for other functions in simple_run to launch.
     """
+    logger.debug("generating new launch script based on launch configuration")
 
     #fetch share directory command, since this needs to be executed as a part of the launch file, append the command to be executed inside the launch file
     package_name_var_name = "package_name"
@@ -262,16 +271,26 @@ def generate_launch_py(launch_conf: launch_configuration, ):
     for i in range(0, launch_l_list.__len__()):
         l =  launch_l_list[i]
         f.write((tab * l[0]) + l[1] + "\n")
+    logger.debug("finished creating luanch script, ||%s|| " % launch_conf.launch_file)
 
-def construct_bash_script(launch_conf: launch_configuration):
+def construct_bash_script(launch_conf: launch_configuration, ros_setup_bash_path="/opt/ros/foxy/setup.bash"):
+    """
+    Does several things relevant to loading launch configuration:
+        1: removes previous build relics
+        2: adds packages whose build statuses are set to true to colcon build, and builds them
+        3: sources setup.sh for both ros2 and for this colcon build
+        4: launches auto-generated 
+    """
     bash_name = "simple_run_commands.sh"
 
     f = open("./%s"  % (bash_name), "w")
 
     #Set file to be executable by all
+    logger.debug("giving constructed bash script execute privilege")
     os.system("chmod a+x ./%s" % (bash_name))
     
     #bash needs this becasuse ???
+    logger.debug("writing to bash script")
     f.write("#!/bin/bash\n\n\n")
     
     #get rid of previous build relics
@@ -290,16 +309,18 @@ def construct_bash_script(launch_conf: launch_configuration):
         "".join( [" %s" % pkg.name for pkg in list(pkgs_to_build)]) + "\n\n" )
 
     #Source ros2, and the newly built package
-    f.write("source /opt/ros/foxy/setup.bash\n\n")
+    f.write("source %s\n\n" % ros_setup_bash_path)
     f.write("source install/setup.sh\n\n")
 
     #launch your package's launch file.
     f.write("ros2 launch %s  %s" % (launch_conf.config_store_pkg.name, launch_conf.launch_file))
     
-    #launch the launch file with your desired packages inside
 
     #close the write stream to make it unoccupied and launch the bash script as a sub process which pipes back to this temrinal
     f.close()
+    
+    #launch the launch file with your desired packages inside
+    logger.debug("launching bash script")
     rc = subprocess.call("./%s" % bash_name)
 
 def create_urdf_of_model(launch_conf: launch_configuration, macro_folder_location: str, FCStd_name: str, urdf_name: str):
@@ -310,6 +331,8 @@ def create_urdf_of_model(launch_conf: launch_configuration, macro_folder_locatio
         If rviz_config.conf is stored in model_pkg, then auto_urdf.urdf will be stored in model_pkg<the root one>/models
     """
     #)
+    logger.debug("creating urdf file")
+
     urdf_config_path = "%s/urdf_file_settings.json"  % macro_folder_location
     f = open(urdf_config_path, "w")
     #f.write("")
@@ -318,32 +341,45 @@ def create_urdf_of_model(launch_conf: launch_configuration, macro_folder_locatio
         "pkg": launch_conf.config_store_pkg.name,
         "FCStd": FCStd_name,
         "urdf_name": urdf_name,
+        "log_path:": log_path,
     }
     f.write(json.dumps(params))
     f.close()
     os.system("python3 freecad_macros/export_model_to_urdf.py")
 
+    logger.info("exported FreeCAD model to urdf file, ||%s||" % launch_conf.config_store_pkg.urdf_name)
+
 env_to_use = real_rviz_env_conf
 """ros2 configuration to use, look at lauch configurations to see what each one does."""
 
 def launch_gazebo_world(launch_conf: launch_configuration):
-    """generate an urdf file, convert that to an sdf file, then launch that sdf file."""
-    create_urdf_of_model(env_to_use, freecad_macros_folder_name, model_file_name, launch_conf.urdf_file)
-    sdf_path =  "%s.sdf" % launch_conf.config_store_pkg.urdf_path
-    final_command = "gazebo.gz sdf -p %s" % (launch_conf.config_store_pkg.urdf_path)
-    #test_command = "echo 'hi' > test.txt"
-    #print("\n" + final_command)
-    #subprocess.call(["gazebo", "sdf", "-p", launch_conf.config_store_pkg.urdf_path, ">", sdf_path])
-    p = subprocess.check_output(final_command, shell=True)
-    s = ''.join(map(chr, p))
-    f = open(sdf_path, "w")
-    f.write(s)
-
+    """
+    generate an urdf file, convert that to an sdf file, then launch that sdf file.
     
-#os.system("python3 freecad_macros/export_model_to_urdf.py")
-#os.system("gazebo.gz service -s /world/empty/create --reqtype ignition.msgs.EntityFactory --reptype ignition.msgs.Boolean --timeout 1000 --req 'sdf_filename: \"")
+    BROKEN: I haven't found a way to get an sdf to launch in gazebo ignition. Help here needed
+    """
+#    create_urdf_of_model(env_to_use, freecad_macros_folder_name, model_file_name, launch_conf.urdf_file)
+#    sdf_path =  "%s.sdf" % launch_conf.config_store_pkg.urdf_path
+#    final_command = "gazebo.gz sdf -p %s" % (launch_conf.config_store_pkg.urdf_path)
 
-#construct_bash_script(env_to_use)
-launch_gazebo_world(env_to_use)
+#    sdf_as_bytes = subprocess.check_output(final_command, shell=True)
+#    """gets gazebo to use its urdf -> sdf utility, and sub process captures its output as bytes"""
+#    sdf_as_string = ''.join(map(chr, sdf_as_bytes))
+#    """do ??? -^ to convert the bytes output to a string"""
+#    sdf_file = open(sdf_path, "w")
+#    """open a new file to write the sdf_as_string to."""
+#    sdf_file.write(sdf_as_string)
+#    sdf_file.close()
+    
+    launch_world_command = "gazebo.gz service -s /world/empty/create --reqtype ignition.msgs.EntityFactory --reptype ignition.msgs.Boolean --timeout 1000 --req 'sdf_filename: \"%s\", name: \"urdf_model\"'" % sdf_path
+    print(launch_world_command)
+    os.system(launch_world_command)
+
+
+print(CLASSES_FOLDER_PATH)
+#logging.basicConfig(filename='%sexample.log' % logging_folder, level=logging.DEBUG)
+#replace_setup_py(env_to_use)
+#generate_launch_py(env_to_use)
+#create_urdf_of_model(env_to_use, "freecad_macros", "urdfmodel.FCStd", "diff_bot.urdf.xml")
 #construct_bash_script(env_to_use)
 
