@@ -10,8 +10,10 @@ import sys
 import numpy as np
 import json
 
-from ..classes.logger import return_logger
+from inspect import getsourcefile
+from os.path import abspath
 
+from classes.logger import return_logger
 
 ###
 # PRE-FREECAD MACRO STARTUP AREA
@@ -32,14 +34,41 @@ except:
 #list where packages are installed:
 # https://stackoverflow.com/questions/122327/how-do-i-find-the-location-of-my-python-site-packages-directory
 
-print("current python interpreter is: %s" % sys.executable)
 #print(os.environ['HOME'])
 # setup procedure if inside vscode or inside freecad:
 
 current_env = sys.executable
 macro_name = os.path.basename(__file__)
-current_py_file = os.path.basename(__file__)
 
+split_str = "/"
+current_py_file:str = abspath(getsourcefile(lambda:0))
+"""returns current file path, no clue what lambda:0 is though"""
+current_py_folder = "".join([x + split_str for x in current_py_file.split(split_str)[0:-1]]) # get folder path from file path
+
+
+
+###
+# Config load area
+###
+
+
+try:
+    f = open("%surdf_file_settings.json" % current_py_folder, "r")
+except Exception as e:
+    print("urdf_file_settings.json hasn't been initialized yet. Run simple run's urdf generator once and it will generate it")
+    print(os.getcwd())
+    raise Exception("Actual Exception: " + str(e))
+
+
+config = json.load(f)
+
+project_dir = config["project_dir"]
+pkg = config["pkg"]
+FCStd = config["FCStd"]
+urdf_name = config["urdf_name"]
+logger = return_logger(config["log_folder"] + "urdf_converter.log", "w")
+
+logger.info("current python interpreter is: %s" % sys.executable)
 
 FreeCAD_mode_options = {
     "cmd": " -c ", # cmd mode is for good for fetching vars from outside scripts.
@@ -58,10 +87,10 @@ https://wiki.freecadweb.org/Debugging#Python_Debugging
 """
 
 if(FreeCAD == ""):
-    print("STARTUP: script probably not executed as macro inside FreeCAD. re-running script through freecad")
-
+    logger.debug("script probably not executed as macro inside FreeCAD. re-running script through freecad")
+    
     #runs Freecad via cmd in cmd mode and appends this macro and grabs every sys.argv after first 3 commands and adds that to command
-    final_console_cmd = "freecad %s ./freecad_macros/" % FreeCAD_mode_options[FreeCAD_mode] + current_py_file
+    final_console_cmd = "freecad %s %s" % (FreeCAD_mode_options[FreeCAD_mode], current_py_file)
     os.system(final_console_cmd)
 
     #exit to prevent errors from FreeCAD not being defined
@@ -73,7 +102,7 @@ if(FreeCAD == ""):
 
 #DEPENDENCIES FOR FREECAD MACRO
 try:
-            print("WARNING: collada likely not installed, attempting fix using freecad.pip util that comes with snap install assuming user installed FreeCAD via snap(where error normally occurs)")
+            logger.warning("collada likely not installed, attempting fix using freecad.pip util that comes with snap install assuming user installed FreeCAD via snap(where error normally occurs)")
             import trimesh
             import importDAE
 except:
@@ -82,26 +111,6 @@ except:
     import importDAE
     import trimesh
 
-###
-# Config load area
-###
-
-
-try:
-    f = open("%s/urdf_file_settings.json" % os.path.dirname(__file__), "r")
-except Exception as e:
-    print("urdf_file_settings.json hasn't been initialized yet. Run simple run's urdf generator once and it will generate it")
-    print(os.getcwd())
-    raise Exception("Actual Exception: " + str(e))
-
-
-config = json.load(f)
-
-project_dir = config["project_dir"]
-pkg = config["pkg"]
-FCStd = config["FCStd"]
-urdf_name = config["urdf_name"]
-logger = return_logger(config["log_path"], "a")
 
 
 @dataclass
@@ -143,7 +152,6 @@ def unit_to_m(messure_l: list, meassure_type = "mm"):
     }
     multiplier = measure_to_m[meassure_type]
     
-    #print("|||ROUNDING NUMBER||| %s" % messure_l)
     return [round(x * multiplier, round_n) for x in messure_l]
 
 
@@ -197,18 +205,20 @@ F
         parent_z: float = self.model.Source.Placement.Base[2]
         normal_z: float = round(self.model.Normal[2], round_n)
 
-        print("parents are %s" % ([parent_x, parent_y, parent_z]))
-        print("normals are %s" % [normal_x, normal_y, normal_z])
+        logger.debug("parents are %s" % ([parent_x, parent_y, parent_z]))
+        logger.debug("parents are %s" % ([parent_x, parent_y, parent_z]))
+
+        logger.debug("normals are %s" % [normal_x, normal_y, normal_z])
         
         base_x: float = parent_x + (parent_x * (-2 * (-1 * normal_x) - 2))
         base_y: float = parent_y + (parent_y * (-2 * (-1 * normal_y) - 2))
         base_z: float = parent_z + (parent_z * (-2 * (-1 * normal_z) - 2))
 
-
-        print("base is %s" % [base_x, base_y, base_z])
+        logger.debug("base is %s" % [base_x, base_y, base_z])
         return FreeCAD.Vector(base_x, base_y, base_z)
 
     def export_self_as_dae(self):
+            logger.debug("exporting self as dae")
             old_val = self.model.Placement.Base
             self.model.Placement.Base = Part_Feature.mirrored_object_base_for_origin(self)
             importDAE.export(self.model, self.model_dae_path)
@@ -267,7 +277,7 @@ class Model():
         
         self.model_doc_dir = model_doc_dir
         self.model_doc_name = model_doc_dir.split("/")[-1].replace(".FCStd", "")
-        #print("||DEFINING DOCUMENT|| opening document file: |%s|" % model_doc_dir )
+        logger.debug("opening document file: |%s|" % model_doc_dir )
         self.model_doc = FreeCAD.open(model_doc_dir)
         """
         model_doc
@@ -343,7 +353,7 @@ class Model():
             """
             self.model_type = Part_Feature
         else:
-            print("|||PART TYPE|| part type is not if statement list. Assuming PartDesign.Body since that type cant be checked because ????")
+            logger.debug("|||PART TYPE|| part type is not if statement list. Assuming PartDesign.Body since that type cant be checked because ????")
             self.model_type = PartDesign_Body
             
         
@@ -352,24 +362,10 @@ class Model():
 
         #self.export_self_as_dae = self.model_type.export_self_as_dae
         
-        print("EXPORTINGT TO DAE")
         self.mesh_location = self.model_type.export_self_as_dae(self)
         """export mesh to dae and return its location"""
         self.mesh: trimesh.Trimesh = trimesh.load(self.mesh_location, force="mesh")
         self.mesh.density = self.material.density
-
-
-    def mirrored_origin_OLD(self):
-        """
-        get origin for mirrored objects through this since FreeCAD does not let you just fetch that sanely :)))
-        
-        If the object is a "Part.Feature", then the model is most likely a mirrored object.
-
-        FreeCAD does not give you the placement of a mirrored object, but you can get it from getting the "normal"/perpendicular line of the plane, and the
-        position of the mirror'd object's "source"/parent object and multiplying by the opposite of the normal.
-
-        this will give you the position of the mirrored object. 
-        """
 
     def __repr__(self):
         print("%s SPECS:" % self.model_name)
@@ -380,46 +376,7 @@ class Model():
         print("model origin in FreeCAD: %s" % self.origin)
         print("model document directory is: %s" % self.model_doc_dir)
         return ""
-    def export_self_as_dae_OLD(self):
-        """
-        export self as a .dae model for rviz2
-
-        also return location of exported file
-
-        NOTE: it appears __obj__ is a POINTER to self.model and not a new object that equals it.
-        all operations done will have to be undone in order to preserve the model :))))
-        """
-        origin = FreeCAD.Vector(0, 0 , 0)
-        print("||DAE EXPORT|| exporting %s" % self.model_name)
-        dae_folder = "%s%s.dae" % (self.models_folder,self.ros_name)
-        #documentation of importDAE
-        # https://github.com/FreeCAD/FreeCAD/blob/d35400aae339d71d5fc8c7f767e3be17687fae90/src/Mod/Arch/importDAE.py
-        try:
-            import importDAE
-        except:
-            print("WARNING: collada likely not installed, attempting fix using freecad.pip util that comes with snap install assuming user installed FreeCAD via snap(where error normally occurs)")
-            os.system("freecad.pip install pycollada")
-            import importDAE
-        if(type(self.model) == Part.Feature):
-            print("||DAE EXPORT|| obj is feature, assuming this is a mirrored feature untill more part features are added to this")
-            old_val = self.model.Placement.Base
-            self.model.Placement.Base = self.mirrored_object_base_for_origin()
-            importDAE.export(self.model, self.model_dae_path)
-            self.model.Placement.Base = old_val
-        #Set the object's placement to be at world origin since models are not exported relative to their origin, but to world origin.
         
-        #by setting the object's position to world origin, the model will be exported relative to it's origin.
-        else:    
-            old_val = self.model.Placement.Base
-            self.model.Placement.Base = origin
-            importDAE.export(self.model, dae_folder)
-            self.model.Placement.Base = old_val
-            
-
-        print("||DAE EXPORT|| finished DAE export")
-        
-        #del(__obj__)
-        return dae_folder
     def symetric_inertia_tensor(self):
         """
         get "symetric" inertia tensor of model in kg/m^2
@@ -500,8 +457,6 @@ class Model():
     def export_self_as_sdf(self):
         """exports the current model and its children to sdf using gazebo.gz(gazebo snapcraft console utiltiy)'s urdf to sdf console utility """
         urdf_path = self.urdf_folder + self.urdf_name
-        #if(os.path.exists(urdf_path) == False):
-        #    print('||EXPORT TO SDF|| urdf file of model does not exist yet. Creating it now.')
 
         self.export_self_as_urdf()
         sdf_path = urdf_path + ".sdf"
@@ -523,10 +478,9 @@ class Model():
         #guide for creating a urdf
         https://docs.ros.org/en/galactic/Tutorials/Intermediate/URDF/URDF-Main.html
         """
-        print("||URDF EXPORT|| exporting self as urdf..")
+        logger.debug("||URDF EXPORT|| exporting self as urdf..")
         #export as dae since urdf needs to read dae file
         urdf_dir = self.urdf_folder + self.urdf_name
-        #print("URDF_DIR IS %s" % urdf_dir)
         self_as_urdf = []
         self_as_urdf.append([0, '<robot name="diff_bot">'])
         
@@ -561,7 +515,7 @@ class Model():
         for l in self_as_urdf:
             f.write("    " * l[0] + l[1] + "\n")
 
-        print("||URDF EXPORT|| finished exporting self ad urdf")
+        logger.info("finished exporting self ad urdf")
     def expose_paths(self):
         """
         Lists helpful debug info related to directories of things:
@@ -616,8 +570,7 @@ wheel_right = Model(model_pkg_dir, robot_model_dir, "RightWheel", "continuous", 
 sub_models=[wheel_left, wheel_right]
 body = Model(model_pkg_dir, robot_model_dir, "BodyBase", "fixed", "base", Generic_PETG, sub_models=sub_models)
 
-
-body.export_self_as_urdf()
+#body.export_self_as_urdf()
 
 
 exit()

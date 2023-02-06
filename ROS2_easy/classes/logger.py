@@ -1,7 +1,7 @@
 """python script for returning default logger to be used across modules"""
 
 import logging
-
+import os
 def return_logger(log_path, logger_write_mode="a"):
     """
     return standard logger to be used across modules
@@ -13,9 +13,15 @@ def return_logger(log_path, logger_write_mode="a"):
     """
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
+    
+    split_str = "/"
+    logger_folder = "".join([x + split_str for x in log_path.split(split_str)[0:-1]]) # get folder path from file path
 
     #%(asctime)s:
     formatter = logging.Formatter('%(module)s.%(funcName)s: %(message)s')
+    #check if logging folder exists, and if it doesn't, make it exist. 
+    if(os.path.exists(logger_folder) != True):
+        os.makedirs(logger_folder)
     file_handler = logging.FileHandler(log_path, mode=logger_write_mode)
     
     file_handler.setLevel(logging.DEBUG)

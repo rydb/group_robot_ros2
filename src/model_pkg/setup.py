@@ -27,7 +27,7 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='insert_here',
+    maintainer='placeholder',
     maintainer_email='placeholder@gmail.com',
     description='TODO: Package description',
     license='TODO: License declaration',

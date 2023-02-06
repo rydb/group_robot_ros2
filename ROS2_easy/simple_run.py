@@ -1,96 +1,40 @@
-#Constructs a bash script to source, compile, remove relics, etc.. and run a user defined set of packages.
+"""
+A collection of functions which makes running ROS2 tasks easier:
+
+See the example folder(FOLDER PENDING) to see how to use this.
+"""
 
 import os
 import subprocess
 import glob
-import sys
-import typing
 import json
-import trimesh
-import logging
-import inspect
 from dataclasses import dataclass
 from typing import Optional
 
-from classes.Package import Package
-from classes.Cmd_Program import Cmd_Program
-from classes.Config import Config
-from classes.logger import return_logger
+from .classes.logger import return_logger
+from .classes.launch_configuration import launch_configuration
 
-freecad_macros_folder_name = "freecad_macros"
-model_file_name = "urdfmodel.FCStd"
-"""name of model file"""
-PROJECT_DIRECTORY = "/home/rydb/Projects/group_robot_ros2/"
-"""root directory of ros2 project. should make this not hard coded later"""
-log_path =  "%ssimple_run_logs/simple_run.log" % PROJECT_DIRECTORY
+
+split_str = "/"
+log_path =  "simple_run_logs/simple_run.log"
 """path of log file for simple_run"""
+log_path_folder = "".join([x + split_str for x in log_path.split(split_str)[0:-1]]) # get folder path from file path
 
 
 logger = return_logger(log_path, logger_write_mode="w")
 """logger for simple_run"""
-@dataclass
-class launch_configuration():
-    """
-    object that holds all of the parameters for a specific type of a ros2 enviorment. E.G: configuration for running a simulation enviorment/real enviorment.
-    """
-    config_store_pkg: Package
-    """
-    package which stores all configs.
-    
-    This includes things like launch files, rviz configs, etc..
 
-    for sanity sake the only option will be to store all configs in 1 package.
-    """
-    launch_file: str
-    """The full name of the launch file for this launch configuration. Include the .py extension. E.G:
-        
-        `launch.py`
-    """
-    urdf_file: str
-    """Full name of the urdf file. This should be either a pre-made file or the name of the final generated file from the create_urdf function"""
-
-    packages_to_run: typing.List[Package]
-    """All packages to be ran by this launch configuration"""
-    extra_pkgs_to_build: Optional[typing.List[Package]] = None
-    """The packages to be built by colcon in addition to config storing pkg"""
-    external_programs_to_run: Optional[typing.List[Cmd_Program]] = None
-    """External programs to run that aren't ROS2 packages. E.G: Gazebo/Ignition"""
+def replace_setup_py(launch_conf: launch_configuration,
+ install_requires="setuptools",
+ zip_safe="True",
+ maintainer="placeholder",
+ maintainer_email="placeholder@gmail.com",
+ description="TODO: Package description",
+ license="TODO: License declaration",
+ tests_require="pytest",
 
 
-gazebo = Cmd_Program("gazebo.gz gazebo")
-"""use:
-    `sudo snap install --beta gazebo`
-    to install gazebo"""
-model_pkg = Package(None, "model_pkg", "model", build=True, urdf_name="diff_bot.urdf.xml")
-#model_pkg.config = Config(model_pkg.folder_path())
-
-rviz2_config_name = "rviz_config_test.rviz"
-rviz2_pkg = Package(model_pkg, "rviz2", "rviz2", config=Config(config_file_name=rviz2_config_name), optional_launch_file_node_args= {"arguments": "['-d', share_directory + '/rviz/%s']" % rviz2_config_name})
-
-robot_state_publisher_pkg = Package(model_pkg, "robot_state_publisher", "robot_state_publisher", optional_launch_file_node_args= {"parameters": "[{'use_sim_time': True, 'robot_description': robot_desc}]"})
-rqt_pkg = Package(model_pkg, "rqt_gui", "rqt_gui")
-
-
-
-real_rviz_env_conf = launch_configuration(
-    config_store_pkg=model_pkg,
-    launch_file="rviz_config_test_launch.py",
-    urdf_file="diff_bot.urdf.xml",
-    packages_to_run=[model_pkg, rviz2_pkg, rqt_pkg, robot_state_publisher_pkg],
-    )
-"""This launch configuration launches rviz alone. Use this when you want to see what a physical robot is doing"""
-
-gazebo_env_conf = launch_configuration(
-    config_store_pkg=model_pkg,
-    launch_file="gazebo_config_test_launch.py",
-    urdf_file="diff_bot.urdf.xml",
-    packages_to_run=[model_pkg, rqt_pkg],
-    external_programs_to_run=[gazebo],
-    )
-"""This launch configuration launches gazebo. Use this for physics simulation"""
-
-
-def replace_setup_py(launch_conf: launch_configuration):
+   ):
     """
     adds EVERY folder in each package_to_build to their /share directorys for each setup.py
 
@@ -118,7 +62,7 @@ def replace_setup_py(launch_conf: launch_configuration):
     sample_f_list.append(['WRITE', 0, " "])
     sample_f_list.append(['WRITE', 0, "#GLOB STARTS FROM THE PACKAGE DIRECTORY WHEN USING setup.py"])
     sample_f_list.append(['WRITE', 0, " "])
-    sample_f_list.append(['WRITE', 0, "package_name = 'model_pkg'"])
+    sample_f_list.append(['WRITE', 0, "package_name = '%s'" % launch_conf.config_store_pkg.name])
     sample_f_list.append(['WRITE', 0, " "])
     sample_f_list.append(['WRITE', 0, "setup("])
     \
@@ -138,30 +82,34 @@ def replace_setup_py(launch_conf: launch_configuration):
     \
                     for folder in [dire[dire.__len__() - 2]for dire in [dire.split("/") for dire in glob.glob("./src/model_pkg/*/", recursive = True)]]:
                         #append every folder in package into /share so files don't get loaded because you forget xyz
-                        print("writting %s" %folder)
+                        #print("writting %s" %folder)
                         sample_f_list.append(["WRITE", 4, "(os.path.join('share', package_name, '%s'), glob.glob('%s/*'))," % (folder, folder) ])
     \
         sample_f_list.append(['WRITE', 1, "],"])
     \
-        sample_f_list.append(['WRITE', 1, "install_requires=['setuptools'],"])
+        sample_f_list.append(['WRITE', 1, "install_requires=['%s']," % install_requires])
     \
-        sample_f_list.append(['WRITE', 1, "zip_safe=True,"])
+        sample_f_list.append(['WRITE', 1, "zip_safe=%s," % zip_safe])
     \
-        sample_f_list.append(['WRITE', 1, "maintainer='insert_here',"])
+        sample_f_list.append(['WRITE', 1, "maintainer='%s'," % maintainer])
     \
-        sample_f_list.append(['WRITE', 1, "maintainer_email='placeholder@gmail.com',"])
+        sample_f_list.append(['WRITE', 1, "maintainer_email='%s'," % maintainer_email])
     \
-        sample_f_list.append(['WRITE', 1, "description='TODO: Package description',"])
+        sample_f_list.append(['WRITE', 1, "description='%s'," % description])
     \
-        sample_f_list.append(['WRITE', 1, "license='TODO: License declaration',"])
+        sample_f_list.append(['WRITE', 1, "license='%s'," % license])
     \
-        sample_f_list.append(['WRITE', 1, "tests_require=['pytest'],"])
+        sample_f_list.append(['WRITE', 1, "tests_require=['%s']," % tests_require])
     \
         sample_f_list.append(['WRITE', 1, "entry_points={"])
     \
             sample_f_list.append(['WRITE', 2, "'console_scripts': ["])
     \
-                sample_f_list.append(['WRITE', 3, "'model = model_pkg.model:main'"])
+                if(launch_conf.config_store_pkg.entry_point != None):
+                    sample_f_list.append(['WRITE', 3, "'%s = model_pkg.%s:%s'" % (launch_conf.config_store_pkg.executable_name, launch_conf.config_store_pkg.executable_name, launch_conf.config_store_pkg.entry_point)])
+    \
+                else:
+                    raise "NO ENTRY POINT FOR setup.py TO USE. SET ONE FOR THE CONFIG PACKAGE(package that stores all config files). THROWING ERROR TO STOP UNDEFINED BEHAVIOUR."
     \
             sample_f_list.append(['WRITE', 2, "],"])
     \
@@ -286,7 +234,7 @@ def construct_bash_script(launch_conf: launch_configuration, ros_setup_bash_path
     f = open("./%s"  % (bash_name), "w")
 
     #Set file to be executable by all
-    logger.debug("giving constructed bash script execute privilege")
+    logger.debug("giving underconstruction bash script execute privilege")
     os.system("chmod a+x ./%s" % (bash_name))
     
     #bash needs this becasuse ???
@@ -323,7 +271,7 @@ def construct_bash_script(launch_conf: launch_configuration, ros_setup_bash_path
     logger.debug("launching bash script")
     rc = subprocess.call("./%s" % bash_name)
 
-def create_urdf_of_model(launch_conf: launch_configuration, macro_folder_location: str, FCStd_name: str, urdf_name: str):
+def create_urdf_of_model(launch_conf: launch_configuration, FCStd_name: str, urdf_name: str):
     """
     Take a FreeCAD model, and convert it to a URDF, and place .DAE files of the model inside the package model directory of the rviz config's parent package:
 
@@ -333,23 +281,23 @@ def create_urdf_of_model(launch_conf: launch_configuration, macro_folder_locatio
     #)
     logger.debug("creating urdf file")
 
-    urdf_config_path = "%s/urdf_file_settings.json"  % macro_folder_location
+    urdf_config_path = "urdf_file_settings.json"
     f = open(urdf_config_path, "w")
     #f.write("")
     params = {
-        "project_dir": os.getcwd(),
+        "project_dir": os.getcwd() + "/",
         "pkg": launch_conf.config_store_pkg.name,
         "FCStd": FCStd_name,
         "urdf_name": urdf_name,
-        "log_path:": log_path,
+        "log_folder": log_path_folder,
     }
     f.write(json.dumps(params))
     f.close()
-    os.system("python3 freecad_macros/export_model_to_urdf.py")
+    os.system("python3 export_model_to_urdf.py")
 
     logger.info("exported FreeCAD model to urdf file, ||%s||" % launch_conf.config_store_pkg.urdf_name)
 
-env_to_use = real_rviz_env_conf
+#env_to_use = real_rviz_env_conf
 """ros2 configuration to use, look at lauch configurations to see what each one does."""
 
 def launch_gazebo_world(launch_conf: launch_configuration):
@@ -374,12 +322,4 @@ def launch_gazebo_world(launch_conf: launch_configuration):
     launch_world_command = "gazebo.gz service -s /world/empty/create --reqtype ignition.msgs.EntityFactory --reptype ignition.msgs.Boolean --timeout 1000 --req 'sdf_filename: \"%s\", name: \"urdf_model\"'" % sdf_path
     print(launch_world_command)
     os.system(launch_world_command)
-
-
-print(CLASSES_FOLDER_PATH)
-#logging.basicConfig(filename='%sexample.log' % logging_folder, level=logging.DEBUG)
-#replace_setup_py(env_to_use)
-#generate_launch_py(env_to_use)
-#create_urdf_of_model(env_to_use, "freecad_macros", "urdfmodel.FCStd", "diff_bot.urdf.xml")
-#construct_bash_script(env_to_use)
 

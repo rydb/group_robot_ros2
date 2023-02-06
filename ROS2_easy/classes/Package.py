@@ -21,9 +21,9 @@ class Package():
     }
     """people store files like models, urdfs, etc.. in different ways, refer to this schema for file paths on where to find file types"""
     
-    def __init__(self, parent_pkg, name, executable_name, config= None, urdf_name= None, output= "screen", build= False, optional_launch_file_node_args = None):
-        self.parent_pkg: "Package" = parent_pkg
-        """string name of ros2 package that is parent of this package."""
+    def __init__(self, name:str, executable_name:str, config:str = None, urdf_name:str = None, output:str= "screen", build:bool= False, optional_launch_file_node_args = None, entry_point:str = None):
+        #self.parent_pkg: "Package" = parent_pkg
+        #"""ROS2 package that is parent of this package."""
         self.name: str = name
         """name of this package"""
         self.executable_name: str = executable_name
@@ -49,6 +49,8 @@ class Package():
 
         self.build: Optional[bool] = build
         """weather colcon builds this package. is set to no by default"""
+        self.entry_point: Optional[str] = entry_point
+        """entry point for this package(assuming this package is executable), used for initializing setup.py"""
 
         self.optional_launch_file_node_args: Optional[typing.Dict[str, str]] = optional_launch_file_node_args
 
