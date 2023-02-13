@@ -10,6 +10,8 @@ import glob
 import json
 from dataclasses import dataclass
 from typing import Optional
+from inspect import getsourcefile
+from os.path import abspath
 
 from .classes.logger import return_logger
 from .classes.launch_configuration import launch_configuration
@@ -20,6 +22,11 @@ log_path =  "simple_run_logs/simple_run.log"
 """path of log file for simple_run"""
 log_path_folder = "".join([x + split_str for x in log_path.split(split_str)[0:-1]]) # get folder path from file path
 
+current_py_file:str = abspath(getsourcefile(lambda:0))
+"""returns path of this python file, no clue what lambda:0 is though"""
+current_py_folder = "".join([x + split_str for x in current_py_file.split(split_str)[0:-1]]) # get folder path from file path
+
+urdf_converter_macro_path = current_py_folder + "export_model_to_urdf.py"
 
 logger = return_logger(log_path, logger_write_mode="w")
 """logger for simple_run"""
@@ -293,7 +300,8 @@ def create_urdf_of_model(launch_conf: launch_configuration, FCStd_name: str, urd
     }
     f.write(json.dumps(params))
     f.close()
-    os.system("python3 export_model_to_urdf.py")
+
+    os.system("python3 %s" % urdf_converter_macro_path)
 
     logger.info("exported FreeCAD model to urdf file, ||%s||" % launch_conf.config_store_pkg.urdf_name)
 

@@ -10,16 +10,27 @@ import sys
 import numpy as np
 import json
 
+
 from inspect import getsourcefile
 from os.path import abspath
 
 from classes.logger import return_logger
+from classes.model import generic_model
 
 ###
 # PRE-FREECAD MACRO STARTUP AREA
 ###
 
 FreeCAD = ""
+def import_freecad():
+    """
+    function to run all steps required in order to import FreeCAD.
+    
+    if python integration with freecad is improved enough to allow
+    `import FreeCAD` 
+    with no issues, this function will
+    """
+
 try:
     import FreeCAD
     #import importDAE
@@ -45,7 +56,8 @@ current_py_file:str = abspath(getsourcefile(lambda:0))
 """returns current file path, no clue what lambda:0 is though"""
 current_py_folder = "".join([x + split_str for x in current_py_file.split(split_str)[0:-1]]) # get folder path from file path
 
-
+executing_directory = os.getcwd() + "/"
+"directory where this file is being executed from(should be from the directory of the project thats importing simple_run)"
 
 ###
 # Config load area
@@ -53,7 +65,7 @@ current_py_folder = "".join([x + split_str for x in current_py_file.split(split_
 
 
 try:
-    f = open("%surdf_file_settings.json" % current_py_folder, "r")
+    f = open("%surdf_file_settings.json" % executing_directory, "r")
 except Exception as e:
     print("urdf_file_settings.json hasn't been initialized yet. Run simple run's urdf generator once and it will generate it")
     print(os.getcwd())
@@ -96,9 +108,6 @@ if(FreeCAD == ""):
     #exit to prevent errors from FreeCAD not being defined
     exit()
     
-###
-# FREECAD MACRO STARTS HERE
-###
 
 #DEPENDENCIES FOR FREECAD MACRO
 try:
@@ -375,6 +384,10 @@ class Model():
         print("model parents: %s" % self.parents)
         print("model origin in FreeCAD: %s" % self.origin)
         print("model document directory is: %s" % self.model_doc_dir)
+        if(self.sub_models != None):
+            print("model sub models: %s" % [model.model_name for model in self.sub_models])
+        else:
+            print("model sub models: [None]")
         return ""
         
     def symetric_inertia_tensor(self):
@@ -548,28 +561,38 @@ class Model():
 
 
 
-
-#b = PartDesign_Body
-
-        
-#get project configs from urdf_file_settings.json
-
-#"""
-#project_dir of hard coded directories. this is not used when this macro is being called from simple_run.py
-#"""
-
 model_pkg_dir = "%s/src/model_pkg" % project_dir
-robot_model_dir = "%s/src/model_pkg/models/urdfmodel.FCStd" % project_dir
+robot_model_path = "%s/src/model_pkg/models/urdfmodel.FCStd" % project_dir
 urdf_dir = "%s/src/model_pkg/urdf/" % project_dir
 
+def generic_model_to_freecad(model:generic_model):
+    """
+    convert generic model class models into FreeCAD specific model class models
+    
+    recursively traverse generic sub_models, convert them to FreeCAD models, and then, once done, return the final converted FreeCAD model
+    """
+    
+    if model.sub_models != None:
+        converted_sub_model_list = []
+        for sub_model in model:
+            converted_sub_model_list.append(generic_model_to_freecad(model))
+        return Model(model.package_dir, model.robot_model_path, model.label, model.joint_type, model.ros_link_name, model.material, sub_models=converted_sub_model_list)
+    else:
+        return Model(model.package_dir, model.robot_model_path, model.label, model.joint_type, model.ros_link_name, model.material, sub_models=None)
+    
+    #for m in model.sub_models:
+        
+    #return Model(model.package_dir, model.robot_model_path, model.label, model.joint_type, model.ros_link_name, model.material, sub_models="I DONT KNOWWWWWW")
 
-wheel_left = Model(model_pkg_dir, robot_model_dir, "LeftWheel", "continuous", "left_wheel", Generic_PETG)
-wheel_right = Model(model_pkg_dir, robot_model_dir, "RightWheel", "continuous", "right_wheel", Generic_PETG)
+#wheel_left = generic_model_to_freecad(generic_model(model_pkg_dir, robot_model_path, "LeftWheel", "continuous", "left_wheel", Generic_PETG))
 
+#wheel_left = Model(model_pkg_dir, robot_model_path, "LeftWheel", "continuous", "left_wheel", Generic_PETG)
+#wheel_right = Model(model_pkg_dir, robot_model_path, "RightWheel", "continuous", "right_wheel", Generic_PETG)
 
-sub_models=[wheel_left, wheel_right]
-body = Model(model_pkg_dir, robot_model_dir, "BodyBase", "fixed", "base", Generic_PETG, sub_models=sub_models)
+#sub_models=[wheel_left, wheel_right]
+#body = Model(model_pkg_dir, robot_model_path, "BodyBase", "fixed", "base", Generic_PETG, sub_models=sub_models)
 
+print(wheel_left)
 #body.export_self_as_urdf()
 
 

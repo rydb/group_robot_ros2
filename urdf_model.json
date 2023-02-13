@@ -1,0 +1,17 @@
+{
+    "ros2_package": "model_pkg",
+    "local_model_file": "urdfmodel.FCStd",
+
+    "model":
+        {
+            "freecad_label": "BodyBase",
+            "material": "Generic_PETG",
+            "joint": "fixed",
+            "sub_models":
+                {
+                    
+                }
+
+
+        }
+}

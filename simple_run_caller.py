@@ -5,6 +5,8 @@ example file for running ros2
 from ROS2_easy.classes.common_packages_and_programs import *
 
 import ROS2_easy.simple_run as simple_run
+import os
+
 
 model_pkg = Package("model_pkg", "model", build=True, urdf_name="diff_bot.urdf.xml",entry_point="main")
 
@@ -38,8 +40,7 @@ model file which is used by urdf generator.
 Checks for this inside the /models folder for the 'config_store_pkg' for the used luanch_configuration
 
 Only supports FreeCAD"""
-
-#simple_run.replace_setup_py(env_to_use)
+simple_run.replace_setup_py(env_to_use)
 #simple_run.generate_launch_py(env_to_use)
-simple_run.create_urdf_of_model(env_to_use, model_file, env_to_use.urdf_file)
-simple_run.construct_bash_script(env_to_use)
+#simple_run.create_urdf_of_model(env_to_use, model_file, env_to_use.urdf_file)
+#simple_run.construct_bash_script(env_to_use)
