@@ -3,21 +3,21 @@ import typing
 from typing import Optional
 import os
 import numpy as np
+import yaml
 
 #!!!RELATIVE IMPORTS MUST HAVE A DOT OR THEY THROW AN ERROR WHEN THE FILE IMPORTING THE IMPORTING FILE TRYS THE IMPORT THE IMPORTING FILE!!!
 from .Config import Config
-PROJECT_DIRECTORY = os.getcwd() + "/"
+PROJECT_PATH = os.getcwd() + "/"
 
 
 class Package():
     """A ros2 package and its relevant information."""
     global local_directory_for
     local_directory_for = {
-        "URDFS": "urdf/",
+        "URDFS": "urdf/", 
         "MODELS": "models/",
         "RVIZ": "rviz/",
         "PACKAGES": "src/",
-        "PROJECT_DIRECTORY": PROJECT_DIRECTORY
     }
     """people store files like models, urdfs, etc.. in different ways, refer to this schema for file paths on where to find file types"""
     
@@ -38,9 +38,6 @@ class Package():
         """
         self.config: Optional[Config] = config
         """config info about this package if relevant"""
-
-        self.urdf_name: str = urdf_name
-        """name of urdf file + extension"""
 
         #self.urdf_path: str = self.urdf_folder + self.urdf_name
 
@@ -73,25 +70,6 @@ class Package():
     def __repr__(self):
         return str(self.__dict__)
 
-    @property
-    def urdf_folder(self):
-        """return urdf folder absolute path"""
-        if(self.urdf_name !=  None):
-            return "%s%s%s/%s" % (local_directory_for["PROJECT_DIRECTORY"],local_directory_for["PACKAGES"], self.name, local_directory_for["URDFS"])
-        else:
-            raise "NO URDF FILE HAS BEEN DECLARED FOR THIS PACKAGE, SET THE URDF'S FILE NAME ONE WHEN INITIALIZING THIS PACKAGE IF THIS PACKAGE IS MEANT TO HAVE ONE. THROWING ERORR TO PREVENT UNKNOWN BEHAVIOUR"
-    
-    @property
-    def urdf_path(self):
-        """return urdf file absoltue path"""
-        if(self.urdf_name !=  None):
-            return self.urdf_folder + self.urdf_name
-        else:
-            raise "NO URDF FILE HAS BEEN DECLARED FOR THIS PACKAGE, SET THE URDF'S FILE NAME ONE WHEN INITIALIZING THIS PACKAGE IF THIS PACKAGE IS MEANT TO HAVE ONE. THROWING ERORR TO PREVENT UNKNOWN BEHAVIOUR"
-
-
-    
-
     """optional arguements to be a part of the launch file node list. Set this for packages with custom node arguements like rviz2."""
     def as_node_conf_dict(self):
 
@@ -107,6 +85,23 @@ class Package():
             result.update(self.optional_launch_file_node_args)
         return result
 
+    @property
+    def package_path(self):
+        """returns path to this package... assuming this is a package that is built"""
+        if(self.build == True):
+            return PROJECT_PATH + local_directory_for["PACKAGES"] + self.name + "/"
+        else:
+            raise "this property is intended for built packages, mabye different behaviour can be added here for things like Rviz2, for example."
+    
+    @property
+    def paths_dict(self):
+        return {
+        "URDFS": self.package_path + local_directory_for["URDFS"], 
+        "MODELS": self.package_path + local_directory_for["MODELS"],
+        "RVIZ": self.package_path + local_directory_for["RVIZ"],
+    }
+    
+        #print(yaml.dump(self.__dict__, default_flow_style=False))
 
 #model_pkg = Package(None, "model_pkg", "model", build=True, urdf_name="diff_bot.urdf.xml")
 

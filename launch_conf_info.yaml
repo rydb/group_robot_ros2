@@ -1,0 +1,6 @@
+MODELS: /home/rydb/Projects/group_robot_ros2/src/model_pkg/models/
+RVIZ: /home/rydb/Projects/group_robot_ros2/src/model_pkg/rviz/
+URDFS: /home/rydb/Projects/group_robot_ros2/src/model_pkg/urdf/
+LOGS_DIR: /home/rydb/Projects/group_robot_ros2/simple_run_logs/
+PROJECT_DIR: /home/rydb/Projects/group_robot_ros2/
+URDF_NAME: diff_bot

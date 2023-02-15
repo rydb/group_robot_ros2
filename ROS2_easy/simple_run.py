@@ -31,6 +31,9 @@ urdf_converter_macro_path = current_py_folder + "export_model_to_urdf.py"
 logger = return_logger(log_path, logger_write_mode="w")
 """logger for simple_run"""
 
+urdf_file_extension = ".xml"
+"""file extension to represent urdf files. """
+
 def replace_setup_py(launch_conf: launch_configuration,
  install_requires="setuptools",
  zip_safe="True",
@@ -192,7 +195,7 @@ def generate_launch_py(launch_conf: launch_configuration, ):
 
     launch_l_list.append([0, "package_name = 'model_pkg'"])
     launch_l_list.append([0, "share_directory = ament_index_python.packages.get_package_share_directory(%s)\n" % package_name_var_name])
-    launch_l_list.append([0, "urdf = share_directory + '/urdf/%s'" % launch_conf.urdf_file])
+    launch_l_list.append([0, "urdf = share_directory + '/urdf/%s'" % (launch_conf.urdf_file_name + urdf_file_extension)])
 
     launch_l_list.append([ 0, "def generate_launch_description():"])
     \
@@ -278,32 +281,37 @@ def construct_bash_script(launch_conf: launch_configuration, ros_setup_bash_path
     logger.debug("launching bash script")
     rc = subprocess.call("./%s" % bash_name)
 
-def create_urdf_of_model(launch_conf: launch_configuration, FCStd_name: str, urdf_name: str):
+def create_urdf_of_model(launch_conf: launch_configuration):
     """
-    Take a FreeCAD model, and convert it to a URDF, and place .DAE files of the model inside the package model directory of the rviz config's parent package:
+    Take a FreeCAD model file named after the urdf in the launch_conf, and convert it to a URDF, and place .DAE files of the model inside the package model directory of the rviz config's parent package:
 
     I.E:
         If rviz_config.conf is stored in model_pkg, then auto_urdf.urdf will be stored in model_pkg<the root one>/models
+
+    NOTE: !!!THE FREECAD MODEL SHOULD HAVE THE SAME NAME AS THE URDF FILE!!!
     """
     #)
     logger.debug("creating urdf file")
 
-    urdf_config_path = "urdf_file_settings.json"
-    f = open(urdf_config_path, "w")
-    #f.write("")
-    params = {
-        "project_dir": os.getcwd() + "/",
-        "pkg": launch_conf.config_store_pkg.name,
-        "FCStd": FCStd_name,
-        "urdf_name": urdf_name,
-        "log_folder": log_path_folder,
-    }
-    f.write(json.dumps(params))
-    f.close()
+    #urdf_config_path = "urdf_file_settings.json"
+    
+    #tell launch conf to save relevant information to yaml
+    launch_conf.save_self_as_yaml()
+    #f = open(urdf_config_path, "w")
+
+
+    #params = {
+    #    "project_dir": os.getcwd() + "/",
+    #    "pkg": launch_conf.config_store_pkg.name,
+    #    "urdf_name": launch_conf.urdf_file_name,
+    #    "log_folder": log_path_folder,
+    #}
+    #f.write(json.dumps(params))
+    #f.close()
 
     os.system("python3 %s" % urdf_converter_macro_path)
 
-    logger.info("exported FreeCAD model to urdf file, ||%s||" % launch_conf.config_store_pkg.urdf_name)
+    logger.info("exported FreeCAD model to urdf file, ||%s||" % (launch_conf.urdf_file_name + urdf_file_extension))
 
 #env_to_use = real_rviz_env_conf
 """ros2 configuration to use, look at lauch configurations to see what each one does."""

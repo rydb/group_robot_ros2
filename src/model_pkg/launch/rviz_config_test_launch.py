@@ -6,7 +6,7 @@ import ament_index_python
 package_name = 'model_pkg'
 share_directory = ament_index_python.packages.get_package_share_directory(package_name)
 
-urdf = share_directory + '/urdf/diff_bot.urdf.xml'
+urdf = share_directory + '/urdf/diff_bot.xml'
 def generate_launch_description():
     with open(urdf, 'r') as infp:
         robot_desc = infp.read()

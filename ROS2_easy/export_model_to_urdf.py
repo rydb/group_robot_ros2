@@ -8,7 +8,7 @@ import typing
 from typing import Optional
 import sys
 import numpy as np
-import json
+import yaml
 
 
 from inspect import getsourcefile
@@ -65,20 +65,21 @@ executing_directory = os.getcwd() + "/"
 
 
 try:
-    f = open("%surdf_file_settings.json" % executing_directory, "r")
+    with open("%slaunch_conf_info.yaml" % executing_directory, "r") as file:
+        config = yaml.safe_load(file)
 except Exception as e:
     print("urdf_file_settings.json hasn't been initialized yet. Run simple run's urdf generator once and it will generate it")
     print(os.getcwd())
     raise Exception("Actual Exception: " + str(e))
 
 
-config = json.load(f)
+#config = yaml.load(f)
 
-project_dir = config["project_dir"]
-pkg = config["pkg"]
-FCStd = config["FCStd"]
-urdf_name = config["urdf_name"]
-logger = return_logger(config["log_folder"] + "urdf_converter.log", "w")
+project_dir = config["PROJECT_DIR"]
+#pkg = config["pkg"]
+#FCStd = config["FCStd"]
+urdf_name = config["URDF_NAME"]
+logger = return_logger(config["LOGS_DIR"] + "urdf_converter.log", "w")
 
 logger.info("current python interpreter is: %s" % sys.executable)
 
@@ -262,10 +263,10 @@ class Model():
     ---
         1: FreeCAD's internal model params should NOT be saved as self. Its data clutter. Save relevant individual parts of the model like position to self though.
     """
-    def __init__(self, package_dir: str, model_doc_dir: str, model_name: str, joint_type: str, ros_link_name: str, material: Material, sub_models=None, color="white", urdf_name="diff_bot.urdf.xml"):
+    def __init__(self, package_dir: str, model_doc_dir: str, model_name: str, joint_type: str, ros_link_name: str, material: Material, sub_models=None, color="white"):
         self.models_folder = "%s/models/" % package_dir 
         self.urdf_folder = "%s/urdf/" % package_dir
-        self.urdf_name = urdf_name
+        
 
         self.package_dir = package_dir
         """
@@ -282,10 +283,11 @@ class Model():
                 the created urdf file will be stored in
                 `package_dir/urdf`
         """
-        self.package_name = package_dir.split("/")[-1]
-        
+        self.package_name = package_dir.split("/")[-2]
         self.model_doc_dir = model_doc_dir
         self.model_doc_name = model_doc_dir.split("/")[-1].replace(".FCStd", "")
+        self.urdf_file = self.model_doc_name + ".xml"
+
         logger.debug("opening document file: |%s|" % model_doc_dir )
         self.model_doc = FreeCAD.open(model_doc_dir)
         """
@@ -469,7 +471,7 @@ class Model():
         return l_list
     def export_self_as_sdf(self):
         """exports the current model and its children to sdf using gazebo.gz(gazebo snapcraft console utiltiy)'s urdf to sdf console utility """
-        urdf_path = self.urdf_folder + self.urdf_name
+        urdf_path = self.urdf_folder + self.urdf_file
 
         self.export_self_as_urdf()
         sdf_path = urdf_path + ".sdf"
@@ -480,7 +482,7 @@ class Model():
 
     def export_self_as_urdf(self):
         """"
-        takes model and its children and converts it to an xml like list, and then transcribes it to file named after urdf_name
+        takes model and its children and converts it to an xml like list, and then transcribes it to file named after urdf_file
 
         then, returns the file path of the saved urdf.
 
@@ -493,7 +495,7 @@ class Model():
         """
         logger.debug("||URDF EXPORT|| exporting self as urdf..")
         #export as dae since urdf needs to read dae file
-        urdf_dir = self.urdf_folder + self.urdf_name
+        urdf_dir = self.urdf_folder + self.urdf_file
         self_as_urdf = []
         self_as_urdf.append([0, '<robot name="diff_bot">'])
         
@@ -561,9 +563,9 @@ class Model():
 
 
 
-model_pkg_dir = "%s/src/model_pkg" % project_dir
-robot_model_path = "%s/src/model_pkg/models/urdfmodel.FCStd" % project_dir
-urdf_dir = "%s/src/model_pkg/urdf/" % project_dir
+model_pkg_dir = "%ssrc/model_pkg/" % project_dir
+robot_model_path = "%ssrc/model_pkg/models/%s.FCStd" % (project_dir, urdf_name)
+urdf_dir = "%ssrc/model_pkg/urdf/" % project_dir
 
 def generic_model_to_freecad(model:generic_model):
     """
@@ -584,17 +586,22 @@ def generic_model_to_freecad(model:generic_model):
         
     #return Model(model.package_dir, model.robot_model_path, model.label, model.joint_type, model.ros_link_name, model.material, sub_models="I DONT KNOWWWWWW")
 
+#print(robot_model_path)
+#print(robot_model_path.split("/")[-1].replace(".FCStd", ""))
+
 #wheel_left = generic_model_to_freecad(generic_model(model_pkg_dir, robot_model_path, "LeftWheel", "continuous", "left_wheel", Generic_PETG))
 
-#wheel_left = Model(model_pkg_dir, robot_model_path, "LeftWheel", "continuous", "left_wheel", Generic_PETG)
-#wheel_right = Model(model_pkg_dir, robot_model_path, "RightWheel", "continuous", "right_wheel", Generic_PETG)
+wheel_left = Model(model_pkg_dir, robot_model_path, "LeftWheel", "continuous", "left_wheel", Generic_PETG)
+wheel_right = Model(model_pkg_dir, robot_model_path, "RightWheel", "continuous", "right_wheel", Generic_PETG)
 
-#sub_models=[wheel_left, wheel_right]
-#body = Model(model_pkg_dir, robot_model_path, "BodyBase", "fixed", "base", Generic_PETG, sub_models=sub_models)
+sub_models=[wheel_left, wheel_right]
+body = Model(model_pkg_dir, robot_model_path, "BodyBase", "fixed", "base", Generic_PETG, sub_models=sub_models)
 
-print(wheel_left)
-#body.export_self_as_urdf()
+body.export_self_as_urdf()
 
+#print(model_pkg_dir)
+#print(robot_model_path)
+#print(urdf_dir)
 
 exit()
 

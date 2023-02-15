@@ -1,22 +1,15 @@
 
-import os
-import subprocess
-import glob
-import sys
 import typing
-import json
-import trimesh
-import logging
-import inspect
+import yaml
 from dataclasses import dataclass
 from typing import Optional
+import os
+
 
 from .Package import Package
 from .Cmd_Program import Cmd_Program
 from .Config import Config
-from .logger import return_logger
-
-
+from .logger import *
 @dataclass
 class launch_configuration():
     """
@@ -35,8 +28,8 @@ class launch_configuration():
         
         `launch.py`
     """
-    urdf_file: str
-    """Full name of the urdf file. This should be either a pre-made file or the name of the final generated file from the create_urdf function"""
+    urdf_file_name: str
+    """urdf file without the extension at the end"""
 
     packages_to_run: typing.List[Package]
     """All packages to be ran by this launch configuration"""
@@ -44,3 +37,22 @@ class launch_configuration():
     """The packages to be built by colcon in addition to config storing pkg"""
     external_programs_to_run: Optional[typing.List[Cmd_Program]] = None
     """External programs to run that aren't ROS2 packages. E.G: Gazebo/Ignition"""
+
+    def save_self_as_yaml(self):
+        """save relevant information about this launch configuration into a yaml file"""
+        with open("launch_conf_info.yaml", "w") as file:
+            
+            #dump relevant information thats package specific
+            yaml.dump(self.config_store_pkg.paths_dict, file)
+
+            #dump relevant information thats relevant to this specific launch configuration
+            relevant_info_on_self = {
+                "URDF_NAME": self.urdf_file_name,
+                "PROJECT_DIR": os.getcwd() + "/",
+                "LOGS_DIR": log_path_folder,
+
+            }
+            yaml.dump(relevant_info_on_self, file)
+        #yaml.dump(self.__dict__, default_flow_style=False))
+        #pass
+
