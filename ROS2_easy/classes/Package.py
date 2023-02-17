@@ -86,7 +86,7 @@ class Package():
         return result
 
     @property
-    def package_path(self):
+    def path(self):
         """returns path to this package... assuming this is a package that is built"""
         if(self.build == True):
             return PROJECT_PATH + local_directory_for["PACKAGES"] + self.name + "/"
@@ -94,12 +94,13 @@ class Package():
             raise "this property is intended for built packages, mabye different behaviour can be added here for things like Rviz2, for example."
     
     @property
-    def paths_dict(self):
+    def path_dict(self):
         return {
-        "URDFS": self.package_path + local_directory_for["URDFS"], 
-        "MODELS": self.package_path + local_directory_for["MODELS"],
-        "RVIZ": self.package_path + local_directory_for["RVIZ"],
+        "URDFS": self.path + local_directory_for["URDFS"], 
+        "MODELS": self.path + local_directory_for["MODELS"],
+        "RVIZ": self.path + local_directory_for["RVIZ"],
     }
+    """paths to various config files (urdfs, models, etc..)"""
     
         #print(yaml.dump(self.__dict__, default_flow_style=False))
 

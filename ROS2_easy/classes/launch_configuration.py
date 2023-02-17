@@ -10,6 +10,10 @@ from .Package import Package
 from .Cmd_Program import Cmd_Program
 from .Config import Config
 from .logger import *
+
+
+MODEL_FORMAT = ".FCStd"
+
 @dataclass
 class launch_configuration():
     """
@@ -43,7 +47,7 @@ class launch_configuration():
         with open("launch_conf_info.yaml", "w") as file:
             
             #dump relevant information thats package specific
-            yaml.dump(self.config_store_pkg.paths_dict, file)
+            yaml.dump(self.config_store_pkg.path_dict, file)
 
             #dump relevant information thats relevant to this specific launch configuration
             relevant_info_on_self = {
@@ -55,4 +59,9 @@ class launch_configuration():
             yaml.dump(relevant_info_on_self, file)
         #yaml.dump(self.__dict__, default_flow_style=False))
         #pass
+        
+    @property
+    def model_file_path(self):
+        """returns path to model file used by this launch configuration. `!!!Assuming there is one, and the file is named after the urdf as it should be if made by the urdf converter!!!`"""
 
+        return self.config_store_pkg.path_dict["MODELS"] + self.urdf_file_name + MODEL_FORMAT

@@ -14,8 +14,7 @@ import yaml
 from inspect import getsourcefile
 from os.path import abspath
 
-from classes.logger import return_logger
-from classes.model import generic_model
+from ROS2_easy.classes.logger import return_logger
 
 ###
 # PRE-FREECAD MACRO STARTUP AREA
@@ -567,20 +566,20 @@ model_pkg_dir = "%ssrc/model_pkg/" % project_dir
 robot_model_path = "%ssrc/model_pkg/models/%s.FCStd" % (project_dir, urdf_name)
 urdf_dir = "%ssrc/model_pkg/urdf/" % project_dir
 
-def generic_model_to_freecad(model:generic_model):
-    """
-    convert generic model class models into FreeCAD specific model class models
+#def generic_model_to_freecad(model:generic_model):
+#    """
+#    convert generic model class models into FreeCAD specific model class models
     
-    recursively traverse generic sub_models, convert them to FreeCAD models, and then, once done, return the final converted FreeCAD model
-    """
+#    recursively traverse generic sub_models, convert them to FreeCAD models, and then, once done, return the final converted FreeCAD model
+#    """
     
-    if model.sub_models != None:
-        converted_sub_model_list = []
-        for sub_model in model:
-            converted_sub_model_list.append(generic_model_to_freecad(model))
-        return Model(model.package_dir, model.robot_model_path, model.label, model.joint_type, model.ros_link_name, model.material, sub_models=converted_sub_model_list)
-    else:
-        return Model(model.package_dir, model.robot_model_path, model.label, model.joint_type, model.ros_link_name, model.material, sub_models=None)
+#    if model.sub_models != None:
+#        converted_sub_model_list = []
+#        for sub_model in model:
+#            converted_sub_model_list.append(generic_model_to_freecad(model))
+#        return Model(model.package_dir, model.robot_model_path, model.label, model.joint_type, model.ros_link_name, model.material, sub_models=converted_sub_model_list)
+#    else:
+#        return Model(model.package_dir, model.robot_model_path, model.label, model.joint_type, model.ros_link_name, model.material, sub_models=None)
     
     #for m in model.sub_models:
         
@@ -596,6 +595,7 @@ wheel_right = Model(model_pkg_dir, robot_model_path, "RightWheel", "continuous",
 
 sub_models=[wheel_left, wheel_right]
 body = Model(model_pkg_dir, robot_model_path, "BodyBase", "fixed", "base", Generic_PETG, sub_models=sub_models)
+
 
 body.export_self_as_urdf()
 
