@@ -12,8 +12,12 @@
 
 - finish ros2_easy lib [Done]
 
-- Add point and click demo to showcase librar(as seperate github which pulls from seperate library which doesn't use LGPL)
+- Add point and click demo to showcase library and to showcase robot moving from point A to B(as seperate github which pulls from seperate library which doesn't use LGPL)
 
+
+## Navigation2
+
+- integrate navigation2 into project
 
 
 ## Gazebo sim:
