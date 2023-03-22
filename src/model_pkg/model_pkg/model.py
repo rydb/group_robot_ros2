@@ -101,7 +101,7 @@ class Robot(Node):
 
             self.odom_trans.header.stamp = now.to_msg()
             self.odom_trans.transform.translation.x = self.odom_trans.transform.translation.x + \
-                0.01  # cos(angle)*2
+                0.00  # cos(angle)*2
             self.odom_trans.transform.translation.y = 0.0  # sin(angle)*2
             self.odom_trans.transform.translation.z = 0.0
             self.odom_trans.transform.rotation = \
@@ -128,14 +128,14 @@ class Robot(Node):
             sin(roll/2) * sin(pitch/2) * sin(yaw/2)
         return Quaternion(x=qx, y=qy, z=qz, w=qw)
 
-    def orient_to(self, cords=[0.0, 0.0, 0.0]):
+    def move_to_point(self, goal_pos_info):
+        """use cordinates from a provided point, and move towards it"""
+        #first, orient self towards point
+        self.orient_towards_point()
+        
         pass
-
-    def move_to(self, cords=[0.0, 0.0, 0.0]):
-        """
-        orient the robot in the direction to move to, 
-        and drive to that location
-        """
+    def orient_towards_point():
+        """take a cordinate point, and orient self towards point"""
 
 def main():
     package_name = "model_pkg"
