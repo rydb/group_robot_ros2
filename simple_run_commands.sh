@@ -5,7 +5,7 @@ rm -r build install
 
 colcon build --packages-select model_pkg
 
-source /opt/ros/foxy/setup.bash
+source /opt/ros/humble/setup.bash
 
 source install/setup.sh
 

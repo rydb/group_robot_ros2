@@ -5,6 +5,7 @@ example file for running ros2
 from ros2_easy.classes.Package import *
 from ros2_easy.classes.launch_configuration import *
 from ros2_easy.classes.common_packages_and_programs import *
+import subprocess
 
 import yaml
 import ros2_easy.simple_run as simple_run
@@ -33,9 +34,21 @@ Checks for this inside the /models folder for the 'config_store_pkg' for the use
 
 """
 
+simple_run.replace_setup_py(env_to_use)
+simple_run.generate_launch_py(env_to_use)
+simple_run.create_urdf_of_model(env_to_use)
+simple_run.construct_bash_script(env_to_use)
 
-#simple_run.replace_setup_py(env_to_use)
-#simple_run.generate_launch_py(env_to_use)
-#simple_run.create_urdf_of_model(env_to_use)
-#simple_run.construct_bash_script(env_to_use)
-simple_run.launch_gazebo_world(env_to_use)
+#simple_run.load_world(rviz_env_conf)
+#simple_run.spawn_model_in_gazebo(rviz_env_conf)
+
+
+
+
+
+
+
+
+
+
+
