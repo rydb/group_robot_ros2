@@ -6,7 +6,7 @@
         </inertial>
         <visual>
             <geometry>
-                <mesh filename="package://model_pkg/models/base.obj"/>
+                <mesh filename="package://model_pkg/models/base.dae"/>
             </geometry>
         </visual>
     </link>
@@ -15,7 +15,6 @@
         <origin xyz="0.1 0.075 0.065"/>
         <parent link="base_link"/>
         <child link="left_wheel_link"/>
-        <axis xyz="0 0 -1"/>
     </joint>
 
     <link name="left_wheel_link">
@@ -25,7 +24,7 @@
         </inertial>
         <visual>
             <geometry>
-                <mesh filename="package://model_pkg/models/left_wheel.obj"/>
+                <mesh filename="package://model_pkg/models/left_wheel.dae"/>
             </geometry>
         </visual>
     </link>
@@ -34,7 +33,6 @@
         <origin xyz="-0.1 0.075 0.065"/>
         <parent link="base_link"/>
         <child link="right_wheel_link"/>
-        <axis xyz="0 0 1"/>
     </joint>
 
     <link name="right_wheel_link">
@@ -44,7 +42,7 @@
         </inertial>
         <visual>
             <geometry>
-                <mesh filename="package://model_pkg/models/right_wheel.obj"/>
+                <mesh filename="package://model_pkg/models/right_wheel.dae"/>
             </geometry>
         </visual>
     </link>

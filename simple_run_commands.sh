@@ -1,6 +1,9 @@
 #!/bin/bash
 
 
+unset GTK_PATH
+
+
 rm -r build install
 
 colcon build --packages-select model_pkg

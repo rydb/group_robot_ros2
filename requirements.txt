@@ -1,5 +1,12 @@
 #INSERT ROS2 DEPENDENCIES HERE
+ros2 humble
 
+#Snap
+sudo snap intall freecad
 
 #PIP3
 pip install numpy-stl
+
+#FreeCAD pip
+freecad.pip install trimesh
+freecad.pip install pycollada
