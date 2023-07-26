@@ -1,8 +1,8 @@
 <COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
   <asset>
     <contributor />
-    <created>2023-07-21T13:03:48.718882</created>
-    <modified>2023-07-21T13:03:48.718883</modified>
+    <created>2023-07-26T16:22:20.518546</created>
+    <modified>2023-07-26T16:22:20.518548</modified>
     <unit name="meter" meter="1.0" />
     <up_axis>Z_UP</up_axis>
   </asset>
@@ -18,7 +18,7 @@
               <color>0.0 0.0 0.0 1.0</color>
             </ambient>
             <diffuse>
-              <color>1.0 1.0 1.0 1.0</color>
+              <color>0.8 0.8 0.8 1.0</color>
             </diffuse>
             <specular>
               <color>1 1 1 1.0</color>
@@ -52,7 +52,7 @@
     <geometry id="geometry0" name="Body">
       <mesh>
         <source id="cubeverts-array0">
-          <float_array count="24" id="cubeverts-array0-array">0.1 -0.15 0 0.1 0.15 0 0.1 -0.15 0.13 0.1 0.15 0.13 -0.1 0.15 0 -0.1 0.15 0.13 -0.1 -0.15 0 -0.1 -0.15 0.13</float_array>
+          <float_array count="24" id="cubeverts-array0-array">0.1 -0.15 0 0.1 0.15 0 0.1 -0.15 0.07 0.1 0.15 0.07 -0.1 0.15 0 -0.1 0.15 0.07 -0.1 -0.15 0 -0.1 -0.15 0.07</float_array>
           <technique_common>
             <accessor count="8" source="#cubeverts-array0-array" stride="3">
               <param type="float" name="X" />
