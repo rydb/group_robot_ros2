@@ -48,15 +48,15 @@
     </link>
 
     <joint name="caster_wheel_joint" type="fixed">
-        <origin xyz="-0.003 -0.236 -0.02"/>
+        <origin xyz="-0.003 -0.131 0.0"/>
         <parent link="base_link"/>
         <child link="caster_wheel_link"/>
     </joint>
 
     <link name="caster_wheel_link">
         <inertial>
-            <mass value="3.2517008069473137e-05"/>
-            <inertia ixx="0.000000" ixy="-0.000000" ixz="-0.000000" iyy="0.000000" iyz="0.000000" izz="0.000000"/>
+            <mass value="1.1041741290746848e-05"/>
+            <inertia ixx="0.000000" ixy="-0.000000" ixz="0.000000" iyy="0.000000" iyz="0.000000" izz="0.000000"/>
         </inertial>
         <visual>
             <geometry>
